@@ -44,3 +44,16 @@ export function fmtLightTime(s: number, lang: Lang = "tr") {
   const n = +(y / 1e6).toFixed(1);
   return lang === "tr" ? `${nf(n, 1)} milyon yıl` : `${nf(n, 1)} million years`;
 }
+
+/** Mesafe (km): 1 milyonun altında tam sayı, üstünde "149,6 milyon km" … "20,8 kentilyon km". */
+export function fmtKm(km: number, lang: Lang = "tr") {
+  if (km < 10) return `${fmtDec(km, 1, lang)} km`;
+  if (km < 1e6) return `${fmtInt(km, lang)} km`;
+  const units: [number, string][] = lang === "tr"
+    ? [[1e18, "kentilyon"], [1e15, "katrilyon"], [1e12, "trilyon"], [1e9, "milyar"], [1e6, "milyon"]]
+    : [[1e18, "quintillion"], [1e15, "quadrillion"], [1e12, "trillion"], [1e9, "billion"], [1e6, "million"]];
+  for (const [v, w] of units) {
+    if (km >= v) { const n = km / v; return `${fmtDec(n, n < 10 ? 2 : 1, lang)} ${w} km`; }
+  }
+  return `${fmtInt(km, lang)} km`;
+}

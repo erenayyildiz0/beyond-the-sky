@@ -116,6 +116,19 @@ button { font: inherit; color: inherit; }
 .light-counter { position: absolute; left: 20px; top: calc(16px + var(--safe-t)); }
 .light-label { font-size: var(--size-small); color: var(--muted); letter-spacing: .04em; }
 .light-value { font-size: clamp(20px, 3.2vw, 34px); font-weight: 600; margin-top: 2px; }
+.light-dist { font-size: var(--size-small); color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.fly-extra { position: absolute; left: 20px; right: 180px; bottom: calc(30px + var(--safe-b)); display: flex; justify-content: space-between; pointer-events: none; }
+.fly-small { pointer-events: auto; border: 1px solid var(--badge-border); background: var(--badge-bg); border-radius: 999px; padding: 9px 16px;
+  font-size: var(--size-small); cursor: pointer; }
+.fly-small:hover, .pick-card button:hover { border-color: var(--accent); }
+.pick-card { position: absolute; left: 50%; bottom: calc(108px + var(--safe-b)); transform: translateX(-50%); width: min(360px, 88vw);
+  background: rgba(2, 4, 10, .78); border: 1px solid var(--badge-border); border-radius: 12px; padding: 14px 16px; backdrop-filter: blur(6px); }
+.act2 > .pick-card:not(.on) { pointer-events: none; }
+.pick-title { font-weight: 600; font-size: calc(var(--size-body) * 1.1); margin-bottom: 6px; }
+.pick-body { font-size: var(--size-small); color: var(--muted); display: grid; gap: 3px; font-variant-numeric: tabular-nums; }
+.pick-actions { display: flex; gap: 8px; margin-top: 12px; }
+.pick-card button { flex: 1; border: 1px solid var(--badge-border); background: var(--badge-bg); border-radius: 999px; padding: 9px; cursor: pointer; }
+.pick-fly { border-color: var(--accent) !important; }
 .ruler { position: absolute; right: 14px; top: 15%; height: 70%; width: 150px; }
 .ruler-line { position: absolute; right: 8px; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.22); }
 .ruler-mark { position: absolute; right: 0; transform: translateY(50%); display: flex; align-items: center; gap: 8px;
@@ -139,11 +152,16 @@ button { font: inherit; color: inherit; }
 .layer-label.exposure { color: #FFE7B0; }
 .body-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
 @media (orientation: landscape) and (min-width: 700px) {
-  .fly-controls { left: auto; right: 180px; transform: none; }
-  .layer-labels { bottom: calc(24px + var(--safe-b)); }
+  .fly-controls { left: 50%; transform: translateX(-50%); }
+  .layer-labels { bottom: calc(84px + var(--safe-b)); }
 }
 @media (max-width: 640px) {
   .ruler { width: 110px; }
+  .fly-extra { right: 20px; bottom: calc(100px + var(--safe-b)); }
+  .pick-card { bottom: calc(150px + var(--safe-b)); }
+  .fly-hint { bottom: calc(150px + var(--safe-b)); padding: 0 20px; }
+  .layer-labels { bottom: calc(180px + var(--safe-b)); }
+  .ruler { top: 12%; height: 58%; }
   .ruler-name { font-size: 10px; }
 }
 

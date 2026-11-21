@@ -15,7 +15,7 @@ export interface ScaleLayer {
   originKm: THREE.Vector3;               // three.js çerçevesinde, Ankara'ya göre
   weight(z: number): number;
   applyWeight(w: number): void;          // malzeme opaklıkları
-  nearFar(distUnits: number): [number, number];
+  nearFar(camPos: THREE.Vector3): [number, number];   // katman biriminde kamera konumu → near/far
 }
 
 export function renderLayers(r: THREE.WebGLRenderer, layers: ScaleLayer[], camPosKm: THREE.Vector3, q: THREE.Quaternion, z: number) {
@@ -26,7 +26,7 @@ export function renderLayers(r: THREE.WebGLRenderer, layers: ScaleLayer[], camPo
     L.applyWeight(w);
     L.camera.quaternion.copy(q);
     L.camera.position.copy(camPosKm).sub(L.originKm).divideScalar(L.unitKm);
-    const [n, f] = L.nearFar(L.camera.position.length());
+    const [n, f] = L.nearFar(L.camera.position);
     L.camera.near = n; L.camera.far = f; L.camera.updateProjectionMatrix();
     r.clearDepth();
     r.render(L.scene, L.camera);

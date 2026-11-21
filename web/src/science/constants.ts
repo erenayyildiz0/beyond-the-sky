@@ -9,3 +9,10 @@ export const VOYAGER1_LAUNCH_UTC = "1977-09-05T12:56:00Z";
 export const VOYAGER1_LIGHT_DAY_UTC = "2026-11-18T10:16:07Z"; // NASA / JPL
 export const SUN_GALACTOCENTRIC_LY = 26_700;     // ~8,18 kpc (GRAVITY 2019)
 export const MW_DIAMETER_LY = 100_000;           // yaklaşık; ekranda "~100.000"
+
+// Ortalama yarıçaplar (km): NASA Planetary Fact Sheet (nssdc.gsfc.nasa.gov/planetary/factsheet); Güneş: IAU 2015 B3 nominal
+export const SUN_RADIUS_KM = 695_700;
+export const MOON_RADIUS_KM = 1_737.4;
+export const PLANET_RADIUS_KM: Record<string, number> = {
+  mercury: 2_439.7, venus: 6_051.8, mars: 3_389.5, jupiter: 69_911, saturn: 58_232, uranus: 25_362, neptune: 24_622,
+};

@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import type { Sky } from "../app/assets";
-import { AU_KM } from "../science/constants";
+import { AU_KM, PLANET_RADIUS_KM, SUN_RADIUS_KM } from "../science/constants";
+import vert from "./shaders/earth.vert.glsl?raw";
+import planetFrag from "./shaders/planet.frag.glsl?raw";
 import { dirFromAltAz, enuToThree } from "../science/coords";
 import { circleLine, createMarkers } from "./markers";
 
@@ -38,7 +40,27 @@ export function createSolarLayer(sky: Sky) {
   vline.computeLineDistances();
   vline.frustumCulled = false;
 
-  scene.add(...orbits.map(o => o.line), vline, dots.obj, sun.obj);
+  // Gerçek boyutlu küreler (yanlarına uçulabilsin diye): Güneş ve gezegenler
+  const sunMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#FFF1D0"), transparent: true });
+  const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS_KM / AU_KM, 64, 32), sunMat);
+  sunMesh.position.copy(sunPos);
+  const planetMats: THREE.ShaderMaterial[] = [];
+  const spheres = bodies.map(({ b, pos }) => {
+    const mat = new THREE.ShaderMaterial({
+      vertexShader: vert, fragmentShader: planetFrag,
+      uniforms: { uSunPos: { value: sunPos }, uColor: { value: new THREE.Color(b.rgb[0] / 255, b.rgb[1] / 255, b.rgb[2] / 255) }, uOpacity: { value: 1 } },
+    });
+    planetMats.push(mat);
+    const r = (PLANET_RADIUS_KM[b.key] ?? 3000) / AU_KM;
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 64, 32), mat);
+    mesh.position.copy(pos);
+    return { mesh, r, pos };
+  });
+  const near = [{ pos: sunPos, r: SUN_RADIUS_KM / AU_KM }, ...spheres.map(s => ({ pos: s.pos, r: s.r })), { pos: voyagerPos, r: 0 }];
+
+  sunMesh.renderOrder = 0;
+  for (const sp of spheres) sp.mesh.renderOrder = 0;
+  scene.add(sunMesh, ...spheres.map(sp => sp.mesh), ...orbits.map(o => o.line), vline, dots.obj, sun.obj);
 
   let weight = 1;
   return {
@@ -51,12 +73,19 @@ export function createSolarLayer(sky: Sky) {
       sun.material.uniforms.uOpacity.value = w;
       dots.material.uniforms.uOpacity.value = w;
       for (const o of orbits) o.mat.opacity = o.base * w;
+      sunMat.opacity = w;
+      for (const m of planetMats) m.uniforms.uOpacity.value = w;
     },
     update(pixelRatio: number, voyagerLine: number) {
       sun.material.uniforms.uPixelRatio.value = pixelRatio;
       dots.material.uniforms.uPixelRatio.value = pixelRatio;
       vmat.opacity = 0.5 * voyagerLine * weight;
     },
-    nearFar(d: number): [number, number] { return [Math.max(1e-6, d * 1e-4), d * 10 + 400]; },
+    /** near: en yakın cismin yüzeyine uzaklığın %30'u */
+    nearFar(c: THREE.Vector3): [number, number] {
+      let gap = c.length() * 1e-3;
+      for (const n of near) gap = Math.min(gap, c.distanceTo(n.pos) - n.r);
+      return [Math.max(1e-9, gap * 0.3), c.length() * 10 + 400];
+    },
   };
 }

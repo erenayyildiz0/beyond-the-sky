@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fmtDate, fmtDec, fmtInt, fmtLightTime, isTonight, upperTr } from "../src/ui/format";
+import { fmtDate, fmtDec, fmtInt, fmtKm, fmtLightTime, isTonight, upperTr } from "../src/ui/format";
 
 describe("format (SPEC §6.9, §3.10)", () => {
   it("sayılar", () => {
@@ -27,5 +27,15 @@ describe("format (SPEC §6.9, §3.10)", () => {
     expect(fmtLightTime(2.5e6 * Y)).toBe("2,5 milyon yıl");
     expect(fmtLightTime(492.2, "en")).toBe("8 minutes 12 seconds");
     expect(fmtLightTime(1200 * Y, "en")).toBe("1,200 years");
+  });
+  it("fmtKm", () => {
+    expect(fmtKm(0.9)).toBe("0,9 km");
+    expect(fmtKm(372_193)).toBe("372.193 km");
+    expect(fmtKm(149.6e6)).toBe("149,6 milyon km");
+    expect(fmtKm(9.4607e12)).toBe("9,46 trilyon km");
+    expect(fmtKm(2.08e19)).toBe("20,8 kentilyon km");
+    expect(fmtKm(372_193, "en")).toBe("372,193 km");
+    expect(fmtKm(149.6e6, "en")).toBe("149.6 million km");
+    expect(fmtKm(2.08e19, "en")).toBe("20.8 quintillion km");
   });
 });

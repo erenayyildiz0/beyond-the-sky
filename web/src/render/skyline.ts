@@ -71,6 +71,7 @@ export function createSkyline() {
       uAltMin: { value: SKYLINE_ALT_MIN },
       uAltMax: { value: SKYLINE_ALT_MAX },
       uOpacity: { value: 1 },
+      uDrop: { value: 0 },
       uBuilding: { value: new THREE.Color("#05060A") },
       uCold: { value: new THREE.Color("#DDE8FF") },
       uWarm: { value: new THREE.Color("#FFD9A0") },

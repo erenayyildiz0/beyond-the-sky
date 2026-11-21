@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { T } from "../app/timeline";
 import type { Sky } from "../app/assets";
 import { AU_KM, EARTH_RADIUS_KM, LIGHT_DAY_KM, LY_KM, PROXIMA_LY } from "./constants";
-import { enuToThree } from "./coords";
+import { dirFromAltAz, enuToThree } from "./coords";
 import { smoothstep } from "./visibility";
 
 export const Z_MIN = 3.6, Z_MAX = 19.318;
@@ -138,4 +138,59 @@ export class FlightControl {
   }
   goTo(z: number, dur: number = T.act2.flyToS) { this.flyTo = { from: this.z, to: z, t: 0, dur }; this.v = 0; }
   cancelGoTo() { this.flyTo = null; }
+}
+
+/** Serbest uçuşta durak: konum (km) ve bakış yönü (birim). */
+export interface StoryStop { key: StopKey; pos: THREE.Vector3; look: THREE.Vector3; z: number }
+
+/**
+ * Durakları gerçek ziyaret noktalarına çevirir (onaylı sapma, docs/EXTRAS.md P2).
+ * bodies: km konumları (Ay, Güneş, Neptün, Voyager); yarıçaplar km.
+ */
+export function storyStops(sky: Sky, r: Route, bodies: { moon: THREE.Vector3; sun: THREE.Vector3; neptune: THREE.Vector3; voyager: THREE.Vector3 },
+                           radii: { moon: number; sun: number; neptune: number }, earthCenter: THREE.Vector3): StoryStop[] {
+  const zs = Object.fromEntries(stopsFromSky(sky).map(s => [s.key, s.z])) as Record<StopKey, number>;
+  const side = (v: THREE.Vector3) => {
+    const a = new THREE.Vector3().crossVectors(v, new THREE.Vector3(0, 1, 0));
+    if (a.lengthSq() < 1e-12) a.set(1, 0, 0);
+    return a.normalize();
+  };
+  const dirTo = (from: THREE.Vector3, to: THREE.Vector3) => to.clone().sub(from).normalize();
+  const onRoute = (z: number) => pathDir(z, r.U, r.uCas, r.uTarget, new THREE.Vector3()).multiplyScalar(10 ** z);
+  const home = new THREE.Vector3();
+  const out: Omit<StoryStop, "z">[] = [];
+
+  out.push({ key: "earth", pos: new THREE.Vector3(0, 25_000, 0), look: dirTo(new THREE.Vector3(0, 25_000, 0), earthCenter) });
+  { // Ay: Ay'ın Dünya'ya göre arkasında ve yanında; bakış Dünya ile Ay arasında
+    const m = bodies.moon, u = m.clone().normalize();
+    const pos = m.clone().addScaledVector(u, 8 * radii.moon).addScaledVector(side(u), 5 * radii.moon);
+    out.push({ key: "moon", pos, look: slerpDir(dirTo(pos, home), dirTo(pos, m), 0.35) });
+  }
+  { // Güneş: Dünya ile Güneş arasında, Güneş'e 40 yarıçap
+    const s = bodies.sun, pos = s.clone().addScaledVector(s.clone().normalize(), -40 * radii.sun);
+    out.push({ key: "sun", pos, look: dirTo(pos, s) });
+  }
+  { // Neptün: Güneş'in karşı tarafından, Neptün ve uzakta Güneş aynı kadrajda
+    const n = bodies.neptune, away = n.clone().sub(bodies.sun).normalize();
+    const pos = n.clone().addScaledVector(away, 10 * radii.neptune).addScaledVector(side(away), 6 * radii.neptune);
+    out.push({ key: "neptune", pos, look: slerpDir(dirTo(pos, n), dirTo(pos, bodies.sun), 0.3) });
+  }
+  { // Voyager 1: yanından geçerken eve bakış
+    const v = bodies.voyager, u = v.clone().normalize();
+    const pos = v.clone().addScaledVector(u, 30_000).addScaledVector(side(u), 30_000);
+    out.push({ key: "voyager", pos, look: slerpDir(dirTo(pos, v), dirTo(pos, home), 0.5) });
+  }
+  const back = (k: StopKey) => { const p = onRoute(zs[k]); out.push({ key: k, pos: p, look: dirTo(p, home) }); };
+  back("nearest");
+  { // Achird: rotada en yakın geçiş noktası; bakış yıldıza
+    const p = onRoute(zs.achird);
+    const i = sky.stars.data.findIndex(x => x[7] === 3821);
+    const star = i >= 0 ? dirFromAltAz(sky.starAlt[i], sky.starAz[i]).multiplyScalar((sky.starDly[i] ?? 19.4) * LY_KM) : p;
+    out.push({ key: "achird", pos: p, look: dirTo(p, star) });
+  }
+  { const p = onRoute(zs.cas); out.push({ key: "cas", pos: p, look: r.uCas.clone() }); }
+  back("bubble");
+  back("galaxy");
+  { const p = onRoute(zs.m31); out.push({ key: "m31", pos: p, look: r.uTarget.clone() }); }
+  return out.map(s => ({ ...s, z: Math.log10(s.pos.length()) }));
 }

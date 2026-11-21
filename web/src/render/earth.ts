@@ -4,7 +4,7 @@ import frag from "./shaders/earth.frag.glsl?raw";
 import atmoFrag from "./shaders/atmosphere.frag.glsl?raw";
 import moonFrag from "./shaders/moon.frag.glsl?raw";
 import type { Sky } from "../app/assets";
-import { EARTH_RADIUS_KM } from "../science/constants";
+import { EARTH_RADIUS_KM, MOON_RADIUS_KM } from "../science/constants";
 import { dirFromAltAz, earthQuaternionFor, enuToThree } from "../science/coords";
 import { ankaraRadiusKm } from "../science/flight";
 import { smoothstep } from "../science/visibility";
@@ -48,7 +48,8 @@ export function createEarthLayer(sky: Sky) {
   // Ay: Ankara + topo-merkezli konum
   const moonPos = dirFromAltAz(m.moon.alt, m.moon.az).multiplyScalar(m.moon.distance_km / EARTH_RADIUS_KM).add(new THREE.Vector3(0, ankaraY, 0));
   const moonMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: moonFrag, uniforms: { uSun: { value: sun }, uOpacity: { value: 1 } } });
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(1737.4 / EARTH_RADIUS_KM, 64, 32), moonMat);
+  const MOON_R = MOON_RADIUS_KM / EARTH_RADIUS_KM;
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_R, 64, 32), moonMat);
   moon.position.copy(moonPos);
   const ep = sky.frames.ecliptic_pole_enu;
   const orbit = circleLine(new THREE.Vector3(), enuToThree(ep[0], ep[1], ep[2]).normalize(), moonPos.length(), "#8FB8FF", 0.25);
@@ -68,11 +69,16 @@ export function createEarthLayer(sky: Sky) {
       orbit.mat.opacity = orbit.base * w;
     },
     /** z ve zamanla değişenler: halka nabzı, z > 6'da sönme */
-    update(z: number, t: number) {
+    update(z: number, t: number, altKm: number) {
       const s = 1 + 0.25 * Math.sin(t * 3);
       ring.scale.setScalar(s * (1 + 3 * smoothstep(4.0, 5.5, z)));
-      ringMat.opacity = (1 - smoothstep(5.6, 6.0, z)) * (0.6 + 0.4 * Math.sin(t * 3));
+      ringMat.opacity = (1 - smoothstep(5.6, 6.0, z)) * smoothstep(400, 1500, altKm) * (0.6 + 0.4 * Math.sin(t * 3));
     },
-    nearFar(d: number): [number, number] { return [Math.max(0.0005, d * 0.01), d * 10 + 200]; },
+    /** near: en yakın yüzeye (Dünya ya da Ay) uzaklığın %30'u — alçak irtifada ve Ay'ın yanında kırpılmasın */
+    nearFar(c: THREE.Vector3): [number, number] {
+      const d = c.length();
+      const gap = Math.min(d - 1, c.distanceTo(moonPos) - MOON_R);
+      return [Math.max(1e-7, gap * 0.3), d * 10 + 200];
+    },
   };
 }

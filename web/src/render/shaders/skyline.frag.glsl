@@ -1,6 +1,7 @@
 // SPEC §6.4 — 3D şehir silueti; veri dokusu: R bina, G pencere türü, B sönme eşiği
 uniform sampler2D uData;
 uniform float uP, uAltMin, uAltMax, uOpacity;
+uniform float uDrop;          // yükselişte ufuk alçalır, binalar aşağı kayar (derece)
 uniform vec3 uBuilding, uCold, uWarm;
 varying vec3 vDir;
 
@@ -8,7 +9,7 @@ void main() {
   vec3 d = normalize(vDir);
   float az = atan(d.x, -d.z);
   if (az < 0.0) az += 6.28318530718;
-  float altDeg = asin(clamp(d.y, -1.0, 1.0)) * 57.29577951308232;
+  float altDeg = asin(clamp(d.y, -1.0, 1.0)) * 57.29577951308232 + uDrop;
   vec2 uv = vec2(az / 6.28318530718, (altDeg - uAltMin) / (uAltMax - uAltMin));
   vec4 px = texture2D(uData, uv);
   if (px.r < 0.5) discard;                                     // gökyüzü görünür
