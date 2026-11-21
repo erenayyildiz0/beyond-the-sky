@@ -166,7 +166,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     galaxies.push({ key, layered, particles, local });
   };
   const mwCenter = gx.clone().multiplyScalar(26_700);                 // GRAVITY 2019 (§3.13)
-  addGalaxy("mw", { center: mwCenter, x: gx, y: gy, n: gz }, false, phone ? 16 : 32, phone ? 6_000 : 15_000, true, 50_000, new THREE.Vector3(-26_700, 0, 0));
+  addGalaxy("mw", { center: mwCenter, x: gx, y: gy, n: gz }, false, phone ? 16 : 24, phone ? 6_000 : 15_000, true, 50_000, new THREE.Vector3(-26_700, 0, 0));
   for (const gal of sky.galaxies) {
     const center = v3(gal.enu_dir).normalize().multiplyScalar(gal.dist_ly);
     let n: THREE.Vector3, x: THREE.Vector3;
@@ -179,7 +179,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     x = new THREE.Vector3().crossVectors(y, n).normalize();
     const spiral = gal.key === "m31" || gal.key === "m33";
     const counts: Record<string, number> = { m31: phone ? 3_000 : 8_000, m33: phone ? 1_000 : 3_000, lmc: phone ? 2_000 : 5_000, smc: phone ? 800 : 2_000 };
-    addGalaxy(gal.key, { center, x, y, n }, true, phone ? 10 : 20, counts[gal.key] ?? 2000, spiral, gal.draw_radius_ly);
+    addGalaxy(gal.key, { center, x, y, n }, true, phone ? 8 : 12, counts[gal.key] ?? 2000, spiral, gal.draw_radius_ly);
   }
   // "Buradasın" işareti (Güneş, orijin)
   const here = createMarkers([{ pos: new THREE.Vector3(), size: 14, color: "#8FB8FF" }], 0);
@@ -230,6 +230,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   if (gs) gs.look = mwCenter.clone().multiplyScalar(0.5 * LY_KM).sub(gs.pos).normalize();
   stops.sort((a, b) => a.z - b.z);
 
+  (ctx.shared as Record<string, unknown>).__layers = layers;            // teşhis (yalnızca bellek)
   world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat };
   const w = world;
   loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
@@ -576,7 +577,7 @@ export class Act2Flight implements Scene {
         if (d2 < b2) b2 = d2;
       }
       best = Math.min(best, Math.sqrt(b2) * MLY_KM);
-      best = Math.min(best, Math.max(Math.abs(CMB_DIST_MLY - this.C.length() / MLY_KM) * MLY_KM, 50 * MLY_KM));   // sınır yüzeyi
+      best = Math.min(best, Math.max(Math.abs(CMB_DIST_MLY - this.C.length() / MLY_KM), 0.04 * CMB_DIST_MLY) * MLY_KM);   // sınır yüzeyi: katı değil, birkaç saniyede geçilsin
     }
     return Math.max(best, 0.05 * MLY_KM * smoothstep(19, 20, z) + 1);
   }
@@ -805,7 +806,8 @@ export class Act2Flight implements Scene {
       const outside = smoothstep(0.85, 1.3, this.C.length() / MLY_KM / CMB_DIST_MLY);   // dışarıdan bakınca küreyi kaplamasın
       wu.uFocal.value = cu.uFocal.value; wu.uPixelRatio.value = pr; wu.uOpacity.value = cosmicWeight(z) * 0.75 * (1 - 0.9 * outside);
       cu.uOpacity.value *= 1 - 0.9 * outside;
-      this.w.cosmic.cmb.update(this.C.length() / MLY_KM, 0.8 * smoothstep(22.3, 23.0, z));
+      // CMB yalnızca sınıra yaklaşınca (yarıçapın %70'inden sonra) ya da dışarıdan; içeride ağın arkasında karmaşa yapmasın
+      this.w.cosmic.cmb.update(this.C.length() / MLY_KM, (0.4 + 0.4 * outside) * smoothstep(0.7, 0.98, this.C.length() / MLY_KM / CMB_DIST_MLY));   // içeriden arka plan (yazılar okunsun), dışarıdan top
       this.w.cosmic.c.home.material.uniforms.uPixelRatio.value = pr;
     }
     this.w.here.material.uniforms.uPixelRatio.value = pr;
@@ -850,7 +852,7 @@ export class Act2Flight implements Scene {
     show(this.ui.lblCosmic, cosmicWeight(z) > 0.5);
     show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5 && z < 22.6);
     show(this.ui.lblWeb, z > 22.2);
-    show(this.ui.lblCmb, z > 22.6);
+    show(this.ui.lblCmb, this.C.length() / MLY_KM > 0.7 * CMB_DIST_MLY);
     this.ui.hereLabel.textContent = z > 20 ? t("act2.homeLG") : t("act2.here");
     show(this.ui.hint, !this.moved && throttle === 0);
     // Yükselişte hareket yukarı/aşağıdır (kamera Ankara'ya bakarken "İleri" ters hissettirmesin)
@@ -1006,16 +1008,20 @@ export class Act2Flight implements Scene {
   private placeLabels() {
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
     this.placeStarLabels(z);
+    const placed: { x: number; y: number }[] = [];           // çakışan etiketleri gizle (sıra: önem; "Buradasın" önce)
     { // "Buradasın": Güneş (orijin)
       const e = this.ui.hereLabel;
       _v.set(0, 0, 0).project(this.layerCam("deep"));
       const vis = z > 16.9 && _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
       show(e, vis);
-      if (vis) e.style.transform = `translate(${((_v.x + 1) / 2) * innerWidth + 12}px, ${((1 - _v.y) / 2) * innerHeight - 10}px)`;
+      if (vis) {
+        const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
+        e.style.transform = `translate(${x + 12}px, ${y - 10}px)`;
+        for (let dx = 0; dx < e.offsetWidth; dx += 60) placed.push({ x: x + dx, y });   // uzun etiket ("· Yerel Grup") boyunca
+      }
     }
     const solarCam = this.layerCam("solar"), earthCam = this.layerCam("earth");
     const alt = this.w.state.altKm;
-    const placed: { x: number; y: number }[] = [];           // çakışan etiketleri gizle (sıra: önem)
     for (const { b, e } of this.ui.bodyLabels) {
       let on = false, cam: THREE.Camera = solarCam;
       if (b.kind === "galaxy") {

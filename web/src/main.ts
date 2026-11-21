@@ -2,6 +2,7 @@ import "./styles.css";
 import { loadAssets, readParams } from "./app/assets";
 import { Director, type AppContext, type Tunables } from "./app/director";
 import { Input } from "./app/input";
+import { AdaptiveRes } from "./app/adaptiveRes";
 import { createRenderer } from "./app/renderer";
 import { STAR_DEFAULTS } from "./render/stars";
 import { MW_GAIN_DEFAULT } from "./render/skyDome";
@@ -53,6 +54,7 @@ async function main() {
   const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare(), act3: () => new Act3Birth() });
   const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {}, gyro: new Gyro(), audio: null };
   director.ctx = ctx;
+  if (params.debug) (window as unknown as { __bts: AppContext }).__bts = ctx;   // yalnızca ?debug=1: ölçüm/teşhis
   const panel = new SciencePanel(ctx, document.body);
   window.addEventListener("bts:toggleDebug", () => panel.toggle());
 
@@ -86,6 +88,8 @@ async function main() {
   await director.go("intro", true);
 
   let last = performance.now();
+  let upd = 0, ren = 0;
+  const res = new AdaptiveRes(renderer.getPixelRatio());
   let running = true;
   document.addEventListener("visibilitychange", () => {
     running = !document.hidden;
@@ -97,9 +101,17 @@ async function main() {
     if (!running) return;
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
+    const t0 = performance.now();
     director.update(dt, now);
-    panel.update(dt, now);
+    const t1 = performance.now();
     director.render(renderer);
+    const t2 = performance.now();
+    // Bilim paneli: kare maliyeti (yumuşatılmış)
+    upd += (t1 - t0 - upd) * 0.1; ren += (t2 - t1 - ren) * 0.1;
+    ctx.debug["kare (ms)"] = `güncelleme ${upd.toFixed(1)} · çizim ${ren.toFixed(1)}`;
+    panel.update(dt, now);
+    const pr = res.step(dt);
+    if (pr !== null) renderer.setPixelRatio(pr);
     requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);

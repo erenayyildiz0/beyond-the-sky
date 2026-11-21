@@ -33,6 +33,7 @@ export function createLayeredGalaxy(f: GalaxyFrame, s: GalaxyShape, planes: numb
   const geo = new THREE.PlaneGeometry(2 * s.halfLy, 2 * s.halfLy, 1, 1);
   const { delta, z: heights } = planeHeights(s, planes);
   const mats: THREE.ShaderMaterial[] = [];
+  const emission: THREE.Mesh[] = [];
   const mk = (z: number, dust: boolean) => {
     const m = new THREE.ShaderMaterial({
       vertexShader: planeVert, fragmentShader: planeFrag, transparent: true, depthWrite: false, depthTest: false,
@@ -49,6 +50,7 @@ export function createLayeredGalaxy(f: GalaxyFrame, s: GalaxyShape, planes: numb
     mesh.position.z = z;
     mesh.frustumCulled = false;
     group.add(mesh);
+    if (!dust) emission.push(mesh);
   };
   for (const z of heights) mk(z, false);
   for (let i = 0; i < dustPlanes; i++) mk((i / (dustPlanes - 1) - 0.5) * 1.2 * s.hDiskLy, true);
@@ -64,6 +66,15 @@ export function createLayeredGalaxy(f: GalaxyFrame, s: GalaxyShape, planes: numb
       group.updateMatrixWorld();
       camLocal.copy(camLy).applyMatrix4(inv.copy(group.matrixWorld).invert());
       const inside = Math.hypot(camLocal.x, camLocal.y) < s.halfLy;
+      // Uyarlamalı katman: yüzden bakınca dikey yapı görünmez → her 4. katman (ağırlık ×4), yandan bakınca hepsi.
+      // Ekran kartı her katmanda bütün diski boyadığı için bu, üstten görünümde maliyeti ~4 kat azaltır.
+      const cosv = Math.abs(camLocal.z) / Math.max(camLocal.length(), 1e-9);
+      const stride = inside ? 1 : cosv > 0.75 ? 4 : cosv > 0.4 ? 2 : 1;
+      const mid = Math.floor(emission.length / 2);
+      emission.forEach((mesh, i) => {
+        mesh.visible = (i - mid) % stride === 0;
+        (mesh.material as THREE.ShaderMaterial).uniforms.uDelta.value = delta * stride;
+      });
       for (const m of mats) {
         const dz = Math.abs(camLocal.z - m.uniforms.uZ.value);
         m.uniforms.uOpacity.value = opacity;
