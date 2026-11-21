@@ -637,6 +637,7 @@ export class Act2Flight implements Scene {
   // ---------- kare ----------
 
   private dtLast = 0;
+  private wheelT = 0;
   private btnLabels: HTMLElement[] = [];
   private gyroLast: THREE.Quaternion | null = null;
   private lastCard: string | null = null;
@@ -676,8 +677,11 @@ export class Act2Flight implements Scene {
     // İleri / Geri
     const keys = input.keys;
     const keyThrottle = (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0) - (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0);
-    const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle));
+    // Tekerlek ve iki parmak: İleri/Geri ile aynı hız yasası — kısa süreli "gaz" (konumu doğrudan zıplatmaz)
     const dz = input.consumeZoom();
+    this.wheelT = Math.max(-1.5, Math.min(1.5, this.wheelT * Math.exp(-dt / 0.35) + dz * 4));
+    if (Math.abs(this.wheelT) < 0.02) this.wheelT = 0;
+    const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle + this.wheelT));
     if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
@@ -694,7 +698,6 @@ export class Act2Flight implements Scene {
       // Yükseliş sürerken İleri hep yukarı (kamera aşağı, Ankara'ya bakarken bile); sonra baktığın yöne
       const dir = this.ascentAuto ? _v.copy(this.C).sub(space.earthCenter).normalize() : moveDirection(this.C, space, this.ori.f, _v);
       this.C.addScaledVector(dir, this.v * dt);
-      if (dz) this.C.addScaledVector(this.ori.f, scale * dz * 2.3);
       resolveCollisions(this.C, space, this.nearStar.i, sInfo ? Math.max(1.5 * starRkm, 1e5) : undefined);
     }
     const alt = altitudeKm(this.C, space);
