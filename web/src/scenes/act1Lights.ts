@@ -48,6 +48,29 @@ export function getSkyWorld(ctx: AppContext): SkyWorld {
 
 const tmpV = new THREE.Vector3();
 
+/** Işık seviyesi p → Perde 1 gökyüzü uniform'ları (Perde 1 ve 3 ortak; SPEC §3.3–§3.5) */
+export function applySkyState(ctx: AppContext, w: SkyWorld, p: number, time: number) {
+  const v = ctx.assets.sky.meta.visibility, tune = ctx.tune;
+  const s = act1SkyState(p, { ...v, sqm_city: tune.sqmCity });
+  const k = tune.extinctionK;
+  const dome = w.dome.material.uniforms;
+  dome.uZenith.value.copy(SKY_COLORS.city.zenith).lerp(SKY_COLORS.dark.zenith, s.q);
+  dome.uHorizon.value.copy(SKY_COLORS.city.horizon).lerp(SKY_COLORS.dark.horizon, s.q);
+  dome.uMWOpacity.value = 1;
+  dome.uSkyLum.value = s.skyLum;
+  dome.uM31Opacity.value = s.m31Opacity;
+  dome.uMWGain.value = tune.uMWGain;
+  dome.uExtK.value = k;
+  dome.uSpace.value = 0;
+  const su = w.starMat.uniforms;
+  su.uSqm.value = s.sqm; su.uGlowMag.value = s.glow; su.uExtK.value = k;
+  su.uBaseSize.value = tune.uBaseSize; su.uMaxSize.value = tune.uMaxSize; su.uRefMag.value = tune.uRefMag;
+  su.uIntensity.value = tune.uIntensity; su.uTime.value = time;
+  su.uPixelRatio.value = ctx.renderer.getPixelRatio();
+  w.skyline.material.uniforms.uP.value = p;
+  return s;
+}
+
 export class Act1Lights implements Scene {
   private ctx!: AppContext;
   private w!: SkyWorld;
@@ -153,7 +176,6 @@ export class Act1Lights implements Scene {
     this.t += dt;
     const { ctx, hold } = this;
     const { sky } = ctx.assets;
-    const v = sky.meta.visibility;
     const tune = ctx.tune;
 
     const d = ctx.input.consumeDrag();
@@ -168,23 +190,8 @@ export class Act1Lights implements Scene {
     ctx.director.setState(hold.locked ? "A1_REVEALED" : hold.holding || hold.p > 0 ? "A1_HOLDING" : "A1_CITY");
 
     // Gökyüzü durumu (§3.3–§3.5)
-    const s = act1SkyState(hold.p, { ...v, sqm_city: tune.sqmCity });
+    const s = applySkyState(ctx, this.w, hold.p, this.t);
     const k = tune.extinctionK;
-    const dome = this.w.dome.material.uniforms;
-    dome.uZenith.value.copy(SKY_COLORS.city.zenith).lerp(SKY_COLORS.dark.zenith, s.q);
-    dome.uHorizon.value.copy(SKY_COLORS.city.horizon).lerp(SKY_COLORS.dark.horizon, s.q);
-    dome.uMWOpacity.value = 1;
-    dome.uSkyLum.value = s.skyLum;
-    dome.uM31Opacity.value = s.m31Opacity;
-    dome.uMWGain.value = tune.uMWGain;
-    dome.uExtK.value = k;
-    dome.uSpace.value = 0;
-    const su = this.w.starMat.uniforms;
-    su.uSqm.value = s.sqm; su.uGlowMag.value = s.glow; su.uExtK.value = k;
-    su.uBaseSize.value = tune.uBaseSize; su.uMaxSize.value = tune.uMaxSize; su.uRefMag.value = tune.uRefMag;
-    su.uIntensity.value = tune.uIntensity; su.uTime.value = this.t;
-    su.uPixelRatio.value = ctx.renderer.getPixelRatio();
-    this.w.skyline.material.uniforms.uP.value = hold.p;
 
     // Sayaç: bütün gökyüzü (yalnızca ekrandaki değil), CPU'da Float64
     const target = countVisible(sky.starAlt, sky.starMag, s.sqm, s.glow, k);

@@ -25,3 +25,24 @@ describe("i18n Türkçe yer tutucu", () => {
     expect(t("act2.label.star", { name: "Vega", dist: "25,0", yıl_de: "2001'de" })).toBe("Vega · 25,0 ışık yılı · ışığı 2001'de yola çıktı");
   });
 });
+
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { prepareSky, type SkyJson } from "../src/app/assets";
+import { dirKey, findBirthStar } from "../src/science/years";
+const sky = prepareSky(JSON.parse(readFileSync(fileURLToPath(new URL("../public/data/sky.json", import.meta.url)), "utf8")) as SkyJson);
+
+describe("findBirthStar (SPEC §3.12)", () => {
+  it("2007 → Achird, match", () => {
+    const r = findBirthStar(sky, 2007);
+    expect(r.kind).toBe("match");
+    if (r.kind === "match") { expect(sky.stars.data[r.star][7]).toBe(3821); expect(r.year).toBe(2007); expect(r.up).toBe(true); }
+  });
+  it("2019 → henüz; tablo dışı → none", () => {
+    expect(findBirthStar(sky, 2019).kind).toBe("tooYoung");
+    expect(findBirthStar(sky, 1800).kind).toBe("none");
+  });
+  it("yön adları", () => {
+    expect(dirKey(0)).toBe("n"); expect(dirKey(90)).toBe("e"); expect(dirKey(200)).toBe("s"); expect(dirKey(350)).toBe("n");
+  });
+});

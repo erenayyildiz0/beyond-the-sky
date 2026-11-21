@@ -8,10 +8,11 @@ import { createConstellationLines } from "../render/constellations";
 import earthVert from "../render/shaders/earth.vert.glsl?raw";
 import bubbleFrag from "../render/shaders/bubble.frag.glsl?raw";
 import { StopCard } from "../ui/stopCard";
-import { lightLeft, trDurationLocative, trLocative } from "../science/years";
+import { findBirthStar, lightLeft, trDurationLocative, trLocative } from "../science/years";
 import { PROXIMA_LY, SUN_GALACTOCENTRIC_LY, VOYAGER1_KM_S, VOYAGER1_LAUNCH_UTC, VOYAGER1_LIGHT_DAY_UTC } from "../science/constants";
 import { fmtInt } from "../ui/format";
 import { createCosmicScene } from "../render/cosmic";
+import { T } from "../app/timeline";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
 import { createDeepScene, layerFov, renderLayers, type ScaleLayer } from "../render/layers";
@@ -273,6 +274,7 @@ export class Act2Flight implements Scene {
   private freeHintS = 0;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement }[];
+    toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement;
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
     lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement; lblCosmic: HTMLElement; lblZoa: HTMLElement;
@@ -379,10 +381,27 @@ export class Act2Flight implements Scene {
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
     const stopCard = new StopCard(root);
+    const toBirth = el("button", "next-btn to-birth", `${t("act2.toBirth")} ›`, root);
+    toBirth.addEventListener("click", () => this.openBirth());
+    const birth = el("div", "birth-panel", undefined, root);
+    el("div", "birth-ask poem", t("act3.ask"), birth);
+    const yr = el("input", "birth-input", undefined, birth);
+    yr.type = "number"; yr.inputMode = "numeric"; yr.min = "1900"; yr.max = String(Math.floor(this.ctx.assets.sky.meta.obs_year_frac));
+    if (this.ctx.params.born) yr.value = String(this.ctx.params.born);
+    const brow = el("div", "pick-actions", undefined, birth);
+    const go = el("button", "pick-fly", t("act3.show"), brow);
+    const skip = el("button", "", t("act3.skip"), brow);
+    el("div", "birth-private", t("act3.private"), birth);
+    go.addEventListener("click", () => this.startReturn(+yr.value || null));
+    yr.addEventListener("keydown", e => { if (e.key === "Enter") this.startReturn(+yr.value || null); });
+    skip.addEventListener("click", () => this.startReturn(null));
+    birth.addEventListener("pointerdown", e => e.stopPropagation());
+    const yourStar = el("div", "act3-star poem", "", root);
+    const ring = el("div", "birth-ring", undefined, root);
     const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root) }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
-    this.ui = { stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
+    this.ui = { toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
   }
 
   private radiusCache = new Map<number, ReturnType<typeof starRadius>>();
@@ -409,6 +428,64 @@ export class Act2Flight implements Scene {
       : t("card.radiusComputed", { r: fmtDec(info.R, info.R < 10 ? 1 : 0, lang), t: fmtDec(Math.round(info.T / 10) * 10, 0, lang) })) : undefined;
     return { key: `star:${i}`, name, posKm: new THREE.Vector3(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).multiplyScalar(LY_KM),
       endKm: info ? Math.max(8 * info.R * SUN_RADIUS_KM, 2e6) : 0.05 * LY_KM, kind: "star", dly: sky.starDly[i], note };
+  }
+
+  private phase: "free" | "birth" | "return" = "free";
+  private atM31S = 0;
+  private birthStar: number | null = null;
+  private ray: THREE.Line | null = null;
+
+  /** A3_BIRTH: Andromeda önünde yarı saydam panel (SPEC §6.6) */
+  private openBirth() {
+    this.phase = "birth";
+    this.ctx.director.setState("A3_BIRTH");
+    show(this.ui.toBirth, false); show(this.ui.birth, true);
+    (this.ui.birth.querySelector("input") as HTMLInputElement).focus();
+  }
+
+  /** A3_RETURN (14 sn): eve otomatik dönüş; doğum yıldızı halkayla, ışık çizgisi (yıl yalnızca bellekte) */
+  private startReturn(Y: number | null) {
+    const sky = this.ctx.assets.sky;
+    const r = Y != null && Y >= 1900 && Y <= Math.floor(sky.meta.obs_year_frac) ? findBirthStar(sky, Y) : null;
+    this.ctx.shared.birth = r ?? { kind: "skip" };
+    this.birthStar = r && (r.kind === "match" || r.kind === "nearest") ? r.star : null;
+    show(this.ui.birth, false);
+    this.phase = "return";
+    this.ctx.director.setState("A3_RETURN");
+    const home = this.w.stops[0];
+    const plan = pointPlan(this.C, home.pos);
+    this.plan = { t: 0, turnS: 0, dur: T.act3.returnS, at: plan.at, q0: this.q.clone(), q1: this.quatFor(home.look, home.pos) };
+    if (this.birthStar != null) {
+      this.ui.yourStar.textContent = t("act3.yourStar", { name: sky.starName(this.birthStar) ?? "" });
+      const P = this.w.space.starPosLy, i = this.birthStar;
+      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]), new THREE.Vector3()]);
+      this.ray = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: "#FFE7B0", transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending }));
+      this.ray.frustumCulled = false; this.ray.renderOrder = 3;
+      this.w.deep.scene.add(this.ray);
+    }
+  }
+
+  private updateBirthUi(z: number, near: string | null, dt: number) {
+    this.atM31S = near === "m31" ? this.atM31S + dt : 0;
+    show(this.ui.toBirth, this.phase === "free" && this.atM31S > 3);          // §6.5.7: kart belirdikten 3 sn sonra
+    if (this.phase !== "return") { show(this.ui.yourStar, false); show(this.ui.ring, false); return; }
+    const i = this.birthStar;
+    if (i != null) {
+      const P = this.w.space.starPosLy, sky = this.ctx.assets.sky;
+      show(this.ui.yourStar, true);
+      _v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).project(this.layerCam("deep"));
+      const on = _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95 && z < 16.5;
+      show(this.ui.ring, on);
+      if (on) this.ui.ring.style.transform = `translate(${(_v.x + 1) / 2 * innerWidth}px, ${(1 - _v.y) / 2 * innerHeight}px) translate(-50%, -50%)`;
+      // Işık çizgisi: z, log10(dly · LY_KM) + 0,3'ün altına inince akar (§6.6)
+      const zs = Math.log10(sky.starDly[i]! * LY_KM);
+      if (this.ray) (this.ray.material as THREE.LineBasicMaterial).opacity = 0.7 * (1 - smoothstep(zs - 0.2, zs + 0.3, z));
+    }
+    if (!this.plan) {                                                         // vardık: A3_LAND
+      if (this.ray) { this.w.deep.scene.remove(this.ray); this.ray = null; }
+      this.phase = "free";
+      this.ctx.director.go("act3");
+    }
   }
 
   /** §8 durak metni (sayılar sky.json ve sabitlerden) */
@@ -521,8 +598,10 @@ export class Act2Flight implements Scene {
 
   // ---------- kare ----------
 
+  private dtLast = 0;
   update(dt: number) {
     this.time += dt;
+    this.dtLast = dt;
     const { ctx } = this;
     const { input } = ctx;
     const space = this.w.space, route = this.w.route;
@@ -530,7 +609,7 @@ export class Act2Flight implements Scene {
     // Bakış: sürükleme ve ←/→
     const d = input.consumeDrag();
     const cam = this.layerCam("deep");
-    if (d.dx || d.dy) {
+    if ((d.dx || d.dy) && this.phase !== "return") {
       if (this.plan) this.plan = null;
       this.ori.rotate(-d.dx * hFovDeg(cam) / innerWidth, d.dy * cam.fov / innerHeight);
       this.sinceUser = 0;
@@ -546,7 +625,7 @@ export class Act2Flight implements Scene {
     const keyThrottle = (keys.has("ArrowUp") || keys.has("KeyW") ? 1 : 0) - (keys.has("ArrowDown") || keys.has("KeyS") ? 1 : 0);
     const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle));
     const dz = input.consumeZoom();
-    if (throttle !== 0 || dz !== 0) { this.plan = null; this.moved = true; this.stopIdx = -1; }
+    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
     const sInfo = this.nearStar.i >= 0 ? this.starInfo(this.nearStar.i) : null;
@@ -709,7 +788,8 @@ export class Act2Flight implements Scene {
     // Durak kartı: bir durağın konumundaysan (uzaklığının %8'i içinde)
     let near: string | null = null;
     for (const st of this.w.stops) if (this.C.distanceTo(st.pos) < 0.08 * st.pos.length()) { near = st.key; break; }
-    this.ui.stopCard.set(near, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
+    this.ui.stopCard.set(this.phase === "free" ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
+    this.updateBirthUi(z, near, this.dtLast);
     // Takımyıldız çizgileri (§6.5.5)
     this.w.bubbleMat.uniforms.uOpacity.value = smoothstep(15.7, 15.9, z) * (1 - smoothstep(16.6, 16.8, z));   // z ∈ [15,9; 16,6]
     this.w.lines.update(smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);

@@ -21,3 +21,27 @@ export function trDurationLocative(s: string) {
   if (map[last]) words[words.length - 1] = map[last];
   return words.join(" ");
 }
+
+import type { Sky } from "../app/assets";
+
+export type BirthResult =
+  | { kind: "match" | "nearest"; star: number; year: number; deltaLy: number; up: boolean }
+  | { kind: "tooYoung" }
+  | { kind: "none" };
+
+/** SPEC §6.6 / §3.12 — doğum yılının yıldızı (tablo pipeline'da önceden hesaplandı) */
+export function findBirthStar(sky: Sky, Y: number): BirthResult {
+  const obs = sky.meta.obs_year_frac;
+  const age = obs - (Y + 0.5);
+  if (age < 7.6) return { kind: "tooYoung" };
+  const row = sky.birth.rows.find(r => r[0] === Y);
+  if (!row) return { kind: "none" };
+  const [, i, delta] = row;
+  if (Math.abs(delta) > 2.5) return { kind: "none" };
+  const dly = sky.starDly[i]!;
+  return { kind: Math.abs(delta) <= 1 ? "match" : "nearest",
+           star: i, year: Math.floor(obs - dly), deltaLy: delta, up: sky.starAlt[i] > 5 };
+}
+
+/** Azimuttan 8 yönlü ad anahtarı (SPEC §6.6) */
+export const dirKey = (azDeg: number) => (["n", "ne", "e", "se", "s", "sw", "w", "nw"] as const)[Math.round((((azDeg % 360) + 360) % 360) / 45) % 8];

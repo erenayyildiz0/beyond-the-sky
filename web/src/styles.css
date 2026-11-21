@@ -151,6 +151,33 @@ button { font: inherit; color: inherit; }
 .layer-labels { position: absolute; left: 20px; bottom: calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 4px; max-width: 60vw; }
 .layer-label { font-size: var(--size-small); color: var(--muted); }
 .layer-label.exposure { color: #FFE7B0; }
+.to-birth { bottom: auto; top: 20%; }
+.birth-panel { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); width: min(380px, 88vw); padding: 22px;
+  background: rgba(2, 4, 10, .72); border: 1px solid var(--badge-border); border-radius: 14px; backdrop-filter: blur(8px); text-align: center; }
+.act2 > .birth-panel.on, .act2 > .birth-panel.on * { pointer-events: auto; }
+.birth-ask { font-size: calc(var(--size-hero) * .7); margin-bottom: 14px; }
+.birth-input { width: 140px; font: inherit; font-size: 28px; text-align: center; background: transparent; color: var(--text);
+  border: 0; border-bottom: 1px solid var(--badge-border); padding: 6px; font-variant-numeric: tabular-nums; }
+.birth-panel button { flex: 1; border: 1px solid var(--badge-border); background: var(--badge-bg); border-radius: 999px; padding: 9px; cursor: pointer; }
+.birth-panel .pick-actions { margin-top: 16px; }
+.birth-private { margin-top: 12px; font-size: var(--size-small); color: var(--muted); }
+.act3-star { position: absolute; left: 0; right: 0; top: 18%; text-align: center; font-size: calc(var(--size-hero) * .7); }
+.birth-ring { position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #FFE7B0;
+  box-shadow: 0 0 12px rgba(255, 231, 176, .6); pointer-events: none; }
+.birth-arrow { position: absolute; left: 0; top: 0; color: #FFE7B0; font-size: 28px; pointer-events: none; }
+.act3 { position: absolute; inset: 0; }
+.act3 > *, .outro > * { opacity: 0; transition: opacity var(--fade) var(--ease); }
+.act3 > .on, .outro > .on { opacity: 1; }
+.act3-text { position: absolute; left: 50%; bottom: calc(90px + var(--safe-b)); transform: translateX(-50%); width: min(640px, 88vw);
+  text-align: center; font-size: calc(var(--size-hero) * .62); line-height: 1.3; }
+.outro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: rgba(0, 0, 0, .35); }
+.outro:not(.on) { pointer-events: none; }
+.outro-line { font-size: var(--size-hero); text-align: center; }
+.outro-logo { letter-spacing: .5em; text-transform: uppercase; font-size: var(--size-small); color: var(--muted); margin-top: 18px; }
+.outro-btns { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
+.outro-btns.on button { pointer-events: auto; }
+.next-btn-inline { border: 1px solid var(--accent); background: rgba(143, 184, 255, .12); border-radius: 999px; padding: 12px 30px; cursor: pointer; }
 .stop-card { position: absolute; left: 50%; bottom: calc(108px + var(--safe-b)); transform: translateX(-50%); width: min(560px, 88vw);
   text-align: center; pointer-events: none; }
 .stop-title { font-size: var(--size-small); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }

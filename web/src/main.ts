@@ -9,6 +9,7 @@ import { Act1Lights } from "./scenes/act1Lights";
 import { Act2Flight } from "./scenes/act2Flight";
 import { Intro } from "./scenes/intro";
 import { Compare } from "./scenes/compare";
+import { Act3Birth } from "./scenes/act3Birth";
 import { T } from "./app/timeline";
 import { el } from "./ui/hud";
 import { setLang, t } from "./ui/i18n";
@@ -47,7 +48,7 @@ async function main() {
     extinctionK: assets.sky.meta.visibility.extinction_k, vMax: T.act2.vMax, galaxySize: 1, showNames: false,
   };
   const input = new Input(canvas);
-  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare() });
+  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare(), act3: () => new Act3Birth() });
   const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {} };
   director.ctx = ctx;
   const panel = new SciencePanel(ctx, document.body);
