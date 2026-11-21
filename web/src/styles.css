@@ -43,7 +43,7 @@ html, body { margin: 0; height: 100dvh; background: var(--bg); overflow: hidden;
 #gl { width: 100%; height: 100%; touch-action: none; display: block; }
 #hud { color: var(--text); font-family: var(--font-ui); font-size: var(--size-body); pointer-events: none;
   text-shadow: 0 1px 12px rgba(0, 0, 0, .6); font-variant-numeric: tabular-nums; }
-#hud button, #hud .place, #hud input, #hud .dimmer { pointer-events: auto; }
+#hud button, #hud .place, #hud input, #hud .dimmer, #hud .compare-slider { pointer-events: auto; }
 #fade { background: #000; opacity: 0; pointer-events: none; z-index: 20; }
 button { font: inherit; color: inherit; }
 
@@ -165,6 +165,20 @@ button { font: inherit; color: inherit; }
   .ruler { top: 12%; height: 58%; }
   .ruler-name { font-size: 10px; }
 }
+
+.compare { position: absolute; inset: 0; }
+.compare > * { opacity: 0; transition: opacity var(--fade) var(--ease); }
+.compare > .on { opacity: 1; }
+.compare-head { position: absolute; left: 20px; top: calc(16px + var(--safe-t)); max-width: 70vw; }
+.compare-kicker { font-size: var(--size-small); color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.compare-title { font-family: var(--font-display); font-weight: 300; font-size: var(--size-hero); margin: 4px 0; }
+.compare-size { font-size: var(--size-body); font-variant-numeric: tabular-nums; }
+.compare-src { font-size: var(--size-small); color: var(--muted); margin-top: 4px; }
+.compare-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
+.compare-bar { position: absolute; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translateX(-50%); display: flex; gap: 12px; align-items: center; }
+.compare-slider { width: min(360px, 40vw); accent-color: var(--accent); }
+.compare-close { position: absolute; right: 20px; top: calc(16px + var(--safe-t)); }
+@media (max-width: 640px) { .compare-bar { bottom: calc(16px + var(--safe-b)); } .compare-slider { width: 30vw; } .compare-bar .fly-btn { min-width: 0; padding: 0 14px; } }
 
 .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); padding: 24px; text-align: center; }
 .fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; }

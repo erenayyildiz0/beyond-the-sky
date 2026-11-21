@@ -34,10 +34,12 @@ export interface AppContext {
   /** Bilim paneline sahnenin canlı göstergeleri */
   debug: Record<string, string | number>;
   /** Sahneler arası aktarılan durum */
-  shared: { act1Look?: { alt: number; az: number }; startZ?: number };
+  shared: { act1Look?: { alt: number; az: number }; startZ?: number;
+    /** Boyut karşılaştırmasından dönünce uçuş kaldığı yerden sürsün */
+    flight?: { C: number[]; f: number[]; u: number[] } };
 }
 
-export type SceneId = "intro" | "act1" | "act2";
+export type SceneId = "intro" | "act1" | "act2" | "compare";
 
 export class Director {
   state: State = "LOADING";

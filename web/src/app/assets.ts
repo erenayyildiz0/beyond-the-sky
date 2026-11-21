@@ -77,6 +77,8 @@ export interface Params {
   explore: boolean;
   /** ?goto=moon|jupiter|saturn|… ya da durak anahtarı: uçuşta doğrudan oraya git (prova/test) */
   goto: string | null;
+  /** ?compare=1: doğrudan boyut karşılaştırması */
+  compare: boolean;
 }
 
 export function readParams(search = location.search): Params {
@@ -92,6 +94,7 @@ export function readParams(search = location.search): Params {
     born: num("born"),
     explore: q.get("explore") === "1",
     goto: q.get("goto"),
+    compare: q.get("compare") === "1",
   };
 }
 

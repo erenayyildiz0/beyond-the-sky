@@ -268,9 +268,14 @@ export class Act2Flight implements Scene {
       sqm: su.uSqm.value, glow: su.uGlowMag.value, k: su.uExtK.value };
     const startZ = ctx.shared.startZ;
     ctx.shared.startZ = undefined;
+    const saved = ctx.shared.flight;
+    ctx.shared.flight = undefined;
     this.buildUi();
     ctx.input.onTap = (x, y) => this.pick(x, y);
-    if (startZ != null) {                                       // ?z= → bu ölçekte rotada başla (prova için)
+    if (saved) {                                                // boyut karşılaştırmasından dönüş
+      this.C.fromArray(saved.C); this.ori.f.fromArray(saved.f); this.ori.u.fromArray(saved.u);
+      this.ascentAuto = false; this.moved = true;
+    } else if (startZ != null) {                                       // ?z= → bu ölçekte rotada başla (prova için)
       const z = Math.min(Z_MAX, Math.max(0, startZ));
       const r = this.w.route;
       const d = pathDir(z, r.U, r.uCas, r.uTarget, new THREE.Vector3());
@@ -330,6 +335,11 @@ export class Act2Flight implements Scene {
       const long = this.homeHold != null && performance.now() - this.homeHold > 600;
       this.homeHold = null;
       if (long) this.goStop(0); else this.lookAt(new THREE.Vector3(), 1.2);        // uzun bas: eve uç
+    });
+    const sizes = el("button", "fly-small", t("compare.open"), extra);
+    sizes.addEventListener("click", () => {
+      this.ctx.shared.flight = { C: this.C.toArray(), f: this.ori.f.toArray(), u: this.ori.u.toArray() };
+      this.ctx.director.go("compare");
     });
     const next = el("button", "fly-small", `${t("act2.nextStop")} ›`, extra);
     next.addEventListener("click", () => this.onAction("next"));

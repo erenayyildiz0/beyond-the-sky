@@ -8,6 +8,7 @@ import { MW_GAIN_DEFAULT } from "./render/skyDome";
 import { Act1Lights } from "./scenes/act1Lights";
 import { Act2Flight } from "./scenes/act2Flight";
 import { Intro } from "./scenes/intro";
+import { Compare } from "./scenes/compare";
 import { T } from "./app/timeline";
 import { el } from "./ui/hud";
 import { setLang, t } from "./ui/i18n";
@@ -46,7 +47,7 @@ async function main() {
     extinctionK: assets.sky.meta.visibility.extinction_k, vMax: T.act2.vMax, galaxySize: 1, showNames: false,
   };
   const input = new Input(canvas);
-  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight() });
+  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare() });
   const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {} };
   director.ctx = ctx;
   const panel = new SciencePanel(ctx, document.body);
@@ -59,7 +60,7 @@ async function main() {
         if (document.fullscreenElement) document.exitFullscreen();
         else document.documentElement.requestFullscreen?.().catch(() => {});
         break;
-      case "restart": director.go("intro"); break;
+      case "restart": ctx.shared = {}; director.go("intro"); break;
       default: director.action(a);
     }
   };
