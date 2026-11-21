@@ -50,3 +50,17 @@ def test_poles_unit_vectors(model):
     for k, v in model.sky["realism"]["poles_enu"].items():
         assert abs(np.linalg.norm(v) - 1) < 1e-4, k
     assert set(POLES) <= set(model.sky["realism"]["poles_enu"])
+
+
+def test_milky_way_map_sun_on_arm():
+    """Galaksi haritası: Güneş'in yeri (−26,7; 0) bin ışık yılı, aynı yarıçaptaki çemberin ortancasından parlak (bir kolun üstünde)."""
+    img = np.asarray(Image.open(OUT / "galaxy_mw.webp").convert("RGBA"), float)[..., :3].mean(axis=2)
+    n = img.shape[0]
+    half = 60.0
+    def px(x, y):
+        return int((x / half + 1) / 2 * n), int((1 - y / half) / 2 * n)
+    sx, sy = px(-26.7, 0.0)
+    sun = img[sy - 3:sy + 4, sx - 3:sx + 4].mean()
+    ring = [img[py, pxx] for a in np.linspace(0, 2 * np.pi, 360, endpoint=False)
+            for pxx, py in [px(26.7 * np.cos(a), 26.7 * np.sin(a))]]
+    assert sun > np.median(ring)

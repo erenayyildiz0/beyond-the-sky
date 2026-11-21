@@ -134,7 +134,7 @@ button { font: inherit; color: inherit; }
 .ruler-mark { position: absolute; right: 0; transform: translateY(50%); display: flex; align-items: center; gap: 8px;
   flex-direction: row-reverse; background: none; border: 0; padding: 2px 0; cursor: pointer; color: var(--muted); }
 .ruler-tick { width: 17px; height: 1px; background: rgba(255,255,255,.45); }
-.ruler-name { font-size: 11px; white-space: nowrap; opacity: .75; }
+.ruler-name { font-size: 11px; white-space: nowrap; opacity: .75; transform: translateY(var(--nudge, 0)); }
 .ruler-mark.near .ruler-name { color: var(--text); opacity: 1; }
 .ruler-mark:hover .ruler-name { opacity: 1; }
 .ruler-cursor { position: absolute; right: 3px; width: 11px; height: 11px; margin-bottom: -5.5px; border-radius: 50%;
@@ -150,6 +150,7 @@ button { font: inherit; color: inherit; }
 .layer-labels { position: absolute; left: 20px; bottom: calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 4px; max-width: 60vw; }
 .layer-label { font-size: var(--size-small); color: var(--muted); }
 .layer-label.exposure { color: #FFE7B0; }
+.body-label.here { color: var(--accent); font-weight: 600; }
 .body-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
 @media (orientation: landscape) and (min-width: 700px) {
   .fly-controls { left: 50%; transform: translateX(-50%); }

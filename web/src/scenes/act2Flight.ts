@@ -7,6 +7,9 @@ import { createEarthLayer } from "../render/earth";
 import { createDeepScene, layerFov, renderLayers, type ScaleLayer } from "../render/layers";
 import { createFlightStarMaterial } from "../render/stars";
 import { createSolarLayer } from "../render/solar";
+import { createGalaxyParticles, createLayeredGalaxy, type GalaxyFrame } from "../render/galaxy";
+import { createMarkers } from "../render/markers";
+import { enuToThree } from "../science/coords";
 import { AU_KM, C_KM_S, EARTH_RADIUS_KM, LY_KM, MOON_RADIUS_KM, PLANET_RADIUS_KM, SUN_RADIUS_KM } from "../science/constants";
 import { dirFromAltAz } from "../science/coords";
 import {
@@ -28,7 +31,7 @@ import { getSkyWorld, type SkyWorld } from "./act1Lights";
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
 const SWITCH_KM = 8;
 
-interface Target { key: string; name: string; posKm: THREE.Vector3; endKm: number; kind: "star" | "body" | "earth"; dly?: number | null }
+interface Target { key: string; name: string; posKm: THREE.Vector3; endKm: number; kind: "star" | "body" | "earth" | "galaxy"; dly?: number | null; rKm?: number }
 
 /** Uçuş dünyası: üç ölçek katmanı + serbest uçuş uzayı; bir kez kurulur (Perde 3 ve Keşif de kullanır). */
 interface FlightWorld {
@@ -43,6 +46,8 @@ interface FlightWorld {
   bodies: Target[];
   /** her kare güncellenir: katman ağırlıkları ve near için */
   state: { altKm: number; nearStarLy: number };
+  galaxies: { key: string; layered: ReturnType<typeof createLayeredGalaxy>; particles: ReturnType<typeof createGalaxyParticles>; local: boolean }[];
+  here: ReturnType<typeof createMarkers>;
 }
 
 let world: FlightWorld | null = null;
@@ -105,7 +110,64 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     ...planets.map(p => ({ key: p.b.key, name: lang === "tr" ? p.b.name_tr : p.b.name_en, posKm: p.posKm, endKm: 6 * p.r, kind: "body" as const })),
     { key: "voyager", name: t("body.voyager"), posKm: voyKm, endKm: 50_000, kind: "body" },
   ];
-  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state };
+  // --- R2: galaksiler (temsili çizim; konum, yön ve boyut gerçek) ---
+  const phone = matchMedia("(pointer: coarse)").matches;
+  const v3 = (a: number[]) => enuToThree(a[0], a[1], a[2]);
+  const g = sky.frames.gal_to_enu;
+  const gx = v3([g[0][0], g[1][0], g[2][0]]).normalize(), gy = v3([g[0][1], g[1][1], g[2][1]]).normalize(), gz = v3([g[0][2], g[1][2], g[2][2]]).normalize();
+  const maps = sky.realism.galaxy_maps;
+  const galaxies: FlightWorld["galaxies"] = [];
+  const addGalaxy = (key: string, f: GalaxyFrame, local: boolean, planes: number, count: number, spiral: boolean, radiusLy: number, sunLocal?: THREE.Vector3) => {
+    const m = maps[key];
+    const layered = createLayeredGalaxy(f, { halfLy: m.half_kly * 1000, hDiskLy: m.h_disk_kly * 1000, hBulgeLy: m.h_bulge_kly * 1000, rBulgeLy: m.r_bulge_kly * 1000 }, planes);
+    layered.group.traverse(o => { o.renderOrder = 2; });
+    const particles = createGalaxyParticles(f, count, { sunLocal, nearR: radiusLy, spiral, radiusK: spiral ? radiusLy : radiusLy * 0.5 });
+    particles.obj.renderOrder = 3;
+    deep.scene.add(layered.group, particles.obj);
+    loadDataTexture(r, `galaxy_${key}.webp`, { srgb: false }).then(tx => { tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping; layered.setMap(tx); }).catch(e => console.warn(e));
+    galaxies.push({ key, layered, particles, local });
+  };
+  const mwCenter = gx.clone().multiplyScalar(26_700);                 // GRAVITY 2019 (§3.13)
+  addGalaxy("mw", { center: mwCenter, x: gx, y: gy, n: gz }, false, phone ? 16 : 32, phone ? 6_000 : 15_000, true, 50_000, new THREE.Vector3(-26_700, 0, 0));
+  for (const gal of sky.galaxies) {
+    const center = v3(gal.enu_dir).normalize().multiplyScalar(gal.dist_ly);
+    let n: THREE.Vector3, x: THREE.Vector3;
+    if (gal.normal_enu && gal.major_enu) { n = v3(gal.normal_enu).normalize(); x = v3(gal.major_enu).normalize(); }
+    else {                                                            // Macellan Bulutları: düzensiz, bize dönük (temsili)
+      n = center.clone().normalize().negate();
+      x = new THREE.Vector3().crossVectors(n, new THREE.Vector3(0, 1, 0)).normalize();
+    }
+    const y = new THREE.Vector3().crossVectors(n, x).normalize();
+    x = new THREE.Vector3().crossVectors(y, n).normalize();
+    const spiral = gal.key === "m31" || gal.key === "m33";
+    const counts: Record<string, number> = { m31: phone ? 3_000 : 8_000, m33: phone ? 1_000 : 3_000, lmc: phone ? 2_000 : 5_000, smc: phone ? 800 : 2_000 };
+    addGalaxy(gal.key, { center, x, y, n }, true, phone ? 10 : 20, counts[gal.key] ?? 2000, spiral, gal.draw_radius_ly);
+  }
+  // "Buradasın" işareti (Güneş, orijin)
+  const here = createMarkers([{ pos: new THREE.Vector3(), size: 14, color: "#8FB8FF" }], 0);
+  here.obj.renderOrder = 4;
+  deep.scene.add(here.obj);
+  // Galaksiler dokunulabilir ve "Buraya uç" hedefi
+  for (const gg of galaxies) {
+    const gal = sky.galaxies.find(x => x.key === gg.key);
+    const R = gg.key === "mw" ? 50_000 : gal!.draw_radius_ly;
+    bodies.push({ key: gg.key, name: t(`body.${gg.key}` as "body.mw"), posKm: gg.layered.frame.center.clone().multiplyScalar(LY_KM),
+      endKm: 2.5 * R * LY_KM, kind: "galaxy", rKm: R * LY_KM });
+  }
+  // Yeni duraklar: galaksinin üstü (galaktik kuzeyden 120.000 ışık yılı, merkeze bakış) ve Yerel Grup genel görünümü
+  const topPos = mwCenter.clone().addScaledVector(gz, 120_000).multiplyScalar(LY_KM);
+  stops.push({ key: "galaxyTop", pos: topPos, look: mwCenter.clone().multiplyScalar(LY_KM).sub(topPos).normalize(), z: Math.log10(topPos.length()) });
+  const m31c = galaxies.find(x => x.key === "m31")!.layered.frame.center;
+  const mid = m31c.clone().add(mwCenter).multiplyScalar(0.5);
+  const side = new THREE.Vector3().crossVectors(m31c.clone().normalize(), gz).normalize();
+  const lgPos = mid.clone().addScaledVector(side, 3.2e6).addScaledVector(gz, 1.2e6).multiplyScalar(LY_KM);
+  stops.push({ key: "localGroup", pos: lgPos, look: mid.clone().multiplyScalar(LY_KM).sub(lgPos).normalize(), z: Math.log10(lgPos.length()) });
+  // "Galaksinin dışı": eve değil, Güneş ile galaksi merkezinin ortasına bak (galaksi kadraja sığsın)
+  const gs = stops.find(x => x.key === "galaxy");
+  if (gs) gs.look = mwCenter.clone().multiplyScalar(0.5 * LY_KM).sub(gs.pos).normalize();
+  stops.sort((a, b) => a.z - b.z);
+
+  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here };
   return world;
 }
 
@@ -144,6 +206,7 @@ export class Act2Flight implements Scene {
   private ui!: {
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
+    lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement;
     bodyLabels: { b: Target; e: HTMLElement }[]; card: PickCard; extra: HTMLElement;
   };
 
@@ -223,13 +286,16 @@ export class Act2Flight implements Scene {
     const lblSolar = el("div", "layer-label", t("label.solar"), labels);
     const lblStars = el("div", "layer-label", t("label.stars"), labels);
     const lblExposure = el("div", "layer-label exposure", t("act2.exposure"), labels);
-    const order = ["moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
+    const lblGalaxy = el("div", "layer-label", t("label.galaxy"), labels);
+    const lblLocal = el("div", "layer-label", t("label.localGroup"), labels);
+    const hereLabel = el("div", "body-label here", t("act2.here"), root);
+    const order = ["mw", "m31", "m33", "lmc", "smc", "moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
     const bodyLabels = this.w.bodies.filter(b => b.kind !== "earth")
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
-    this.ui = { root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, bodyLabels, card, extra };
+    this.ui = { root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, bodyLabels, card, extra };
   }
 
   // ---------- hareket planları ----------
@@ -397,6 +463,17 @@ export class Act2Flight implements Scene {
       sk.uDrop.value = dip + 12 * smoothstep(0, 3, h);
       sk.uOpacity.value = 1 - smoothstep(1.5, 4, h);
     }
+    // R2: galaksiler (Samanyolu 16,6 → 17,4; Yerel Grup 17,6 → 18,4)
+    const camLy = _v2.copy(this.C).divideScalar(LY_KM);
+    for (const g of this.w.galaxies) {
+      const op = g.local ? smoothstep(17.6, 18.4, z) : smoothstep(16.6, 17.4, z);
+      g.layered.update(op, camLy, 1.0);
+      g.particles.mat.uniforms.uOpacity.value = op * 0.07;          // ince yıldız tozu; ana görünüm katmanlardan
+      g.particles.mat.uniforms.uSize.value = tune.galaxySize;
+      g.particles.mat.uniforms.uPixelRatio.value = pr;
+    }
+    this.w.here.material.uniforms.uOpacity.value = smoothstep(16.6, 17.0, z);
+    this.w.here.material.uniforms.uPixelRatio.value = pr;
     // deep katmanı
     const dome = this.w.deep.dome;
     dome.mesh.position.copy(this.C).divideScalar(LY_KM);
@@ -428,6 +505,8 @@ export class Act2Flight implements Scene {
     show(this.ui.lblSolar, sw > 0.5);
     show(this.ui.lblStars, z > 11.8);
     show(this.ui.lblExposure, exposureLimit(z) > 6.7);
+    show(this.ui.lblGalaxy, smoothstep(16.6, 17.4, z) > 0.5);
+    show(this.ui.lblLocal, smoothstep(17.6, 18.4, z) > 0.5);
     show(this.ui.hint, !this.moved && throttle === 0);
     show(this.ui.hint2, !this.ascentAuto && this.moved && this.freeHintS < 6);
     Object.assign(this.ctx.debug, {
@@ -439,6 +518,7 @@ export class Act2Flight implements Scene {
       "uMLim": exposureLimit(z).toFixed(2),
       "en yakın yıldız": this.nearStar.i >= 0 ? `${this.ctx.assets.sky.starName(this.nearStar.i) ?? "adsız"} · ${fmtDec(this.nearStar.dLy, 2, lang)} ışık yılı` : "—",
       "durak": this.stopIdx >= 0 ? this.w.stops[this.stopIdx].key : "—",
+      "MW merkezine açı": `${(this.ori.f.angleTo(this.w.galaxies[0].layered.frame.center.clone().multiplyScalar(LY_KM).sub(this.C)) * 180 / Math.PI).toFixed(1)}°`,
     });
   }
 
@@ -466,6 +546,11 @@ export class Act2Flight implements Scene {
       if (b.key === "earth") {
         if (ew > 0.2) consider(b, scr(_v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM), earthCam), 36 + this.screenRadius(b.posKm, EARTH_RADIUS_KM, earthCam.fov));
         else if (sw > 0.2) consider(b, scr(_v.copy(b.posKm).divideScalar(AU_KM), solarCam), 36);
+      } else if (b.kind === "galaxy") {
+        const local = b.key !== "mw";
+        if ((local ? smoothstep(17.6, 18.4, z) : smoothstep(16.6, 17.4, z)) > 0.3) {
+          consider(b, scr(_v.copy(b.posKm).divideScalar(LY_KM), this.w.layers[0].camera), 36 + this.screenRadius(b.posKm, b.rKm ?? 0, this.w.layers[0].camera.fov) * 0.6);
+        }
       } else if (b.key === "moon" && ew > 0.2) {
         consider(b, scr(_v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM), earthCam), 36 + this.screenRadius(b.posKm, MOON_RADIUS_KM, earthCam.fov));
       } else if (sw > 0.2) {
@@ -516,6 +601,7 @@ export class Act2Flight implements Scene {
     }
     if (["mercury", "venus", "mars", "saturn", "uranus", "neptune"].includes(tg.key)) lines.push(t("card.repTexture"));
     if (tg.key === "sun") lines.push(t("card.repGlow"));
+    if (tg.kind === "galaxy") lines.push(t("card.repGalaxy"));
     return { title: tg.name, lines, fly: tg.kind === "earth" ? "home" : "here" };
   }
 
@@ -538,12 +624,23 @@ export class Act2Flight implements Scene {
 
   private placeLabels() {
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
+    { // "Buradasın": Güneş (orijin)
+      const e = this.ui.hereLabel;
+      _v.set(0, 0, 0).project(this.w.layers[0].camera);
+      const vis = z > 16.9 && _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
+      show(e, vis);
+      if (vis) e.style.transform = `translate(${((_v.x + 1) / 2) * innerWidth + 12}px, ${((1 - _v.y) / 2) * innerHeight - 10}px)`;
+    }
     const solarCam = this.w.layers[1].camera, earthCam = this.w.layers[2].camera;
     const alt = this.w.state.altKm;
     const placed: { x: number; y: number }[] = [];           // çakışan etiketleri gizle (sıra: önem)
     for (const { b, e } of this.ui.bodyLabels) {
       let on = false, cam: THREE.Camera = solarCam;
-      if (b.key === "moon") { on = earthWeight(z) > 0.2 && alt > SWITCH_KM; cam = earthCam; _v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM); }
+      if (b.kind === "galaxy") {
+        on = (b.key === "mw" ? smoothstep(16.6, 17.4, z) : smoothstep(17.6, 18.4, z)) > 0.3
+          && b.posKm.distanceTo(this.C) > 3 * (b.rKm ?? 0);                       // çok yakındayken etiket yok
+        cam = this.w.layers[0].camera; _v.copy(b.posKm).divideScalar(LY_KM);
+      } else if (b.key === "moon") { on = earthWeight(z) > 0.2 && alt > SWITCH_KM; cam = earthCam; _v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM); }
       else { on = solarWeight(z) > 0.2; _v.copy(b.posKm).divideScalar(AU_KM); }
       if (!on) { show(e, false); continue; }
       _v.project(cam);

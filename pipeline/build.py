@@ -15,6 +15,7 @@ import pandas as pd
 from bts import PIPELINE_VERSION
 from bts.birth import birth_table
 from bts.bodies import bodies_meta
+from bts.galaxymap import galaxy_meta
 from bts.catalog import index_of_hip, load_catalog
 from bts.config import Config, load_config
 from bts.fetch import fetch_all, require_black_marble
@@ -145,7 +146,7 @@ def compute(cfg: Config, today_local: date | None = None, use_horizons=True, t=N
         "voyager1": voy,
         "galaxies": gal,
         "birth": {"first_year": cfg.birth.first_year, "rows": birth},
-        "realism": bodies_meta(cfg, R),
+        "realism": bodies_meta(cfg, R) | {"galaxy_maps": galaxy_meta()},
     }
     detail = {"version": 1, "fields": ["ci", "con", "spect"],
               "data": [[_num(c, 2), con, (s.strip() if isinstance(s, str) and s.strip() else None)]
@@ -221,7 +222,9 @@ def main() -> None:
             from bts.earth import build_earth
             written += build_earth(cfg, out)
         from bts.bodies import build_bodies
+        from bts.galaxymap import build_galaxy_maps
         written += build_bodies(cfg, out)
+        written += build_galaxy_maps(out)
         sizes.update({p.name: p.stat().st_size for p in written})
     from bts.preview import build_previews
     build_previews(m, cfg.path(cfg.preview_dir), altaz8)

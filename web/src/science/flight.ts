@@ -81,7 +81,8 @@ export function flightFrame(z: number, look: Look, r: Route, outPos = new THREE.
   return { pos: outPos, q: outQ };
 }
 
-export type StopKey = "earth" | "moon" | "sun" | "neptune" | "voyager" | "nearest" | "achird" | "cas" | "bubble" | "galaxy" | "m31";
+export type StopKey = "earth" | "moon" | "sun" | "neptune" | "voyager" | "nearest" | "achird" | "cas" | "bubble" | "galaxy" | "m31"
+  | "galaxyTop" | "localGroup";
 export interface Stop { key: StopKey; z: number }
 
 /** §3.10 durakları. Ay, Güneş, Neptün sky.json'dan; Achird ve Kraliçe (Schedar) yıldız uzaklıklarından. */

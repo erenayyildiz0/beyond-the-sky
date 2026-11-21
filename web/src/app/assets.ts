@@ -33,6 +33,7 @@ export interface SkyJson {
   realism: {
     ankara_patch: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
     poles_enu: Record<string, number[]>;
+    galaxy_maps: Record<string, { half_kly: number; h_disk_kly: number; h_bulge_kly: number; r_bulge_kly: number }>;
   };
 }
 
@@ -159,7 +160,8 @@ export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opt
   if (hit) return hit;
   const p = fetch(`${BASE}data/${file}`)
     .then(r => { if (!r.ok) throw new Error(`${file}: ${r.status}`); return r.blob(); })
-    .then(b => createImageBitmap(b, { imageOrientation: "flipY" }))
+    // premultiplyAlpha: "none" — galaksi haritalarında alfa saydamlık değil toz derinliği; renk alfayla çarpılmamalı
+    .then(b => createImageBitmap(b, { imageOrientation: "flipY", premultiplyAlpha: "none" }))
     .then(bmp => {
       const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
       tex.flipY = false;
