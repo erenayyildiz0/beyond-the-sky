@@ -67,7 +67,7 @@ export const tr = {
   "stop.localGroup": "Yerel Grup: Samanyolu, Andromeda, Üçgen Gökadası ve onlarca cüce galaksi. Andromeda bize {d} ışık yılı uzakta.",
   "stop.virgo": "Başak Kümesi: bize en yakın büyük galaksi kümesi. Işığı ~{d} milyon yılda geliyor.",
   "stop.coma": "Saç Kümesi: binden fazla galaksinin bir arada durduğu dev bir küme. Işığı ~{d} milyon yılda geliyor.",
-  "stop.cosmicWeb": "Bunlar {n} gerçek galaksi. Ortadaki boş bant kaçınma bölgesi: Samanyolu'nun tozu o yönleri örtüyor. Ev, tam ortada.",
+  "stop.cosmicWeb": "Bu ölçekte evren her yerde aşağı yukarı aynı; evimizin çevresi daha kalabalık değil (~300 milyon ışık yılının üstünde homojen: Scrimgeour ve ark. 2012). İçeriden bakınca {n} 2MRS galaksisi eve yakın çok daha sık görünür: uzakta yalnızca parlak galaksiler ölçülebiliyor. Burada gerçek galaksiler çevreleriyle aynı yoğunlukta seçildi; 2MRS'in ötesi temsili.",
   "act2.label.star": "{name} · {dist} ışık yılı · ışığı {yıl_de} yola çıktı",
   "act2.label.approx": "{name} · ~{dist} ışık yılı · ışığı ~{yıl_de} yola çıktı",
   "act2.label.bc": "{name} · ~{dist} ışık yılı · ışığı MÖ ~{bc} civarında yola çıktı",

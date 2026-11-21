@@ -22,6 +22,9 @@ Kullanıcı geri bildirimi: galaksiye üstten bakılamıyor, kümelere gidilemiy
 - **R5 — Gözlemlenebilir evren:** Planck 2018 düz ΛCDM ile ışık yolculuğu süresi (100 milyon ışık yılının ötesinde),
   2MRS'in ötesi temsili kozmik ağ, sınırda Planck CMB haritası (ESA and the Planck Collaboration, CC BY-SA 3.0 IGO) küre
   olarak (yarıçap = son saçılma yüzeyinin eşhareketli uzaklığı, ~45 milyar ışık yılı). Sayılar milyar/sekstilyon/septilyon.
+  Uzaktan (evden 1,2–2,2 milyar ışık yılının ötesinde) 2MRS galaksileri ve temsili ağ aynı yoğunlukta seyreltilir: 2MRS akı sınırlı
+  olduğundan eve yakın yoğunluk ~15.000 kat fazla (seçim etkisi); evren ~300 milyon ışık yılının üstünde homojen (Scrimgeour ve ark.
+  2012). Temsili ağ log-düzgün örneklenir, sis kameraya göredir (web/src/render/cosmicSampling.ts).
 - **R4 — Yıldızların gerçek boyutu ve boyut karşılaştırması** (kullanıcının ilham kaynağı "Star Size Comparison 2"):
   yıldızın yanına gidince gerçek yarıçaplı küre (Stefan–Boltzmann ile L ve T'den, bilinen devler için yayımlanmış ölçümler);
   Ay → Dünya → Jüpiter → Güneş → Sirius → Arcturus → Betelgeuse … yan yana karşılaştırma modu. Kaynaklı.

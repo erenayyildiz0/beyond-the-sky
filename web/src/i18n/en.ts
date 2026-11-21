@@ -68,7 +68,7 @@ export const en: Record<Key, string> = {
   "stop.localGroup": "The Local Group: the Milky Way, Andromeda, the Triangulum Galaxy and dozens of dwarf galaxies. Andromeda is {d} light-years away.",
   "stop.virgo": "The Virgo Cluster: the nearest large galaxy cluster. Its light takes ~{d} million years to reach us.",
   "stop.coma": "The Coma Cluster: a giant cluster of more than a thousand galaxies. Its light takes ~{d} million years to reach us.",
-  "stop.cosmicWeb": "These are {n} real galaxies. The empty band is the zone of avoidance: Milky Way dust hides those directions. Home is right in the middle.",
+  "stop.cosmicWeb": "At this scale the universe looks much the same everywhere; our neighbourhood is not more crowded (homogeneous above ~300 million light-years: Scrimgeour et al. 2012). From inside, the {n} 2MRS galaxies look far denser near home only because just the bright ones can be measured far away. Here real galaxies are sampled at the same density as their surroundings; beyond 2MRS is illustrative.",
   "act2.label.star": "{name} · {dist} light-years · its light left in {year}",
   "act2.label.approx": "{name} · ~{dist} light-years · its light left around {year}",
   "act2.label.bc": "{name} · ~{dist} light-years · its light left around {bc} BC",

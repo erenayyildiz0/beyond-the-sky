@@ -12,6 +12,7 @@ import { findBirthStar, lightLeft, trDurationLocative, trLocative } from "../sci
 import { PROXIMA_LY, SUN_GALACTOCENTRIC_LY, VOYAGER1_KM_S, VOYAGER1_LAUNCH_UTC, VOYAGER1_LIGHT_DAY_UTC } from "../science/constants";
 import { fmtInt } from "../ui/format";
 import { createCosmicScene, createProceduralWeb } from "../render/cosmic";
+import { cosmicSampling, keepAlpha } from "../render/cosmicSampling";
 import { createCmbSphere } from "../render/cmb";
 import { AGE_GYR, CMB_DIST_MLY, lightTravelGyr } from "../science/cosmology";
 import { T } from "../app/timeline";
@@ -68,7 +69,7 @@ interface FlightWorld {
   here: ReturnType<typeof createMarkers>;
   s2: ReturnType<typeof createMarkers>;
   sgraDot: ReturnType<typeof createMarkers>;
-  cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array;
+  cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array; web: ReturnType<typeof createProceduralWeb>;
     webMat: THREE.ShaderMaterial; cmb: ReturnType<typeof createCmbSphere> } | null;
   starBody: ReturnType<typeof createStarBodyLayer>;
   lines: ReturnType<typeof createConstellationLines>;
@@ -322,11 +323,12 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     // R5: 2MRS'in ötesi (temsili) ve gözlemlenebilir evrenin sınırı (Planck CMB)
     const webMat = c.material.clone();
     const phone = matchMedia("(pointer: coarse)").matches;
-    c.scene.add(createProceduralWeb(phone ? 40_000 : 120_000, 1300, CMB_DIST_MLY * 0.97, webMat));
+    const web = createProceduralWeb(phone ? 60_000 : 200_000, cosmicMeta?.max_mly ?? 1400, CMB_DIST_MLY * 0.97, webMat);
+    c.scene.add(web.pts);
     const cmb = createCmbSphere(CMB_DIST_MLY, sky.frames.gal_to_enu);
     c.scene.add(cmb.mesh);
     loadDataTexture(r, "cmb_2k.jpg").then(tx => { cmb.mat.uniforms.uMap.value = tx; }).catch(e => console.warn(e));
-    w.cosmic = { c, names, data, webMat, cmb };
+    w.cosmic = { c, names, data, web, webMat, cmb };
     precompile(ctx.renderer, c.scene, camera);
   }).catch(e => console.warn(e));
   return world;
@@ -907,7 +909,11 @@ export class Act2Flight implements Scene {
       const wu = this.w.cosmic.webMat.uniforms;                       // R5: temsili uzak ağ ve CMB
       const outside = smoothstep(0.85, 1.3, this.C.length() / MLY_KM / CMB_DIST_MLY);   // dışarıdan bakınca küreyi kaplamasın
       wu.uFocal.value = cu.uFocal.value; wu.uPixelRatio.value = pr; wu.uOpacity.value = cosmicWeight(z) * 0.75 * (1 - 0.9 * outside);
-      cu.uOpacity.value *= 1 - 0.9 * outside;
+      // Uzaktan gerçek ve temsili galaksiler aynı yoğunlukta: 2MRS'in eve yakın kalabalığı seçim etkisi (cosmicSampling.ts)
+      const smp = cosmicSampling(this.C.length() / MLY_KM, this.w.cosmic.web);
+      wu.uNt.value = smp.web.nt; wu.uFog.value = smp.web.fog;
+      cu.uNt.value = smp.real.nt; cu.uFog.value = smp.real.fog;
+      cu.uOpacity.value *= (1 - 0.9 * outside) * (1 - 0.25 * smp.g);   // örneklemdeyken temsili ağla aynı parlaklık
       // CMB yalnızca sınıra yaklaşınca (yarıçapın %70'inden sonra) ya da dışarıdan; içeride ağın arkasında karmaşa yapmasın
       this.w.cosmic.cmb.update(this.C.length() / MLY_KM, (0.4 + 0.4 * outside) * smoothstep(0.7, 0.98, this.C.length() / MLY_KM / CMB_DIST_MLY));   // içeriden arka plan (yazılar okunsun), dışarıdan top
       this.w.cosmic.c.home.material.uniforms.uPixelRatio.value = pr;
@@ -956,7 +962,7 @@ export class Act2Flight implements Scene {
     show(this.ui.lblGalaxy, smoothstep(16.6, 17.4, z) > 0.5);
     show(this.ui.lblLocal, smoothstep(17.6, 18.4, z) > 0.5 && cosmicWeight(z) < 0.5);
     show(this.ui.lblCosmic, cosmicWeight(z) > 0.5);
-    show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5 && z < 22.6);
+    show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5 && Dmly < 1200);          // ötesinde eşit yoğunluklu örneklem
     show(this.ui.lblWeb, z > 22.2);
     show(this.ui.lblCmb, this.C.length() / MLY_KM > 0.7 * CMB_DIST_MLY);
     this.ui.hereLabel.textContent = z > 20 ? t("act2.homeLG") : t("act2.here");
@@ -1055,7 +1061,9 @@ export class Act2Flight implements Scene {
       // 2MRS galaksileri (20 px)
       const cz = this.w.cosmic, P = cz.c.positions, cam = this.layerCam("cosmic");
       let bi = -1, bd = 20;
+      const nt = cz.c.material.uniforms.uNt.value as number;
       for (let i = 0; i < cz.c.count; i++) {
+        if (keepAlpha(cz.c.u[i], cz.c.dens[i], nt) < 0.5) continue;   // uzaktan seyreltilmiş (çizilmeyen) galaksi
         const s2 = scr(_v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]), cam);
         if (!s2) continue;
         const dd = Math.hypot(s2.x - x, s2.y - y);

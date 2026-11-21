@@ -4,6 +4,7 @@ import frag from "./shaders/cosmic.frag.glsl?raw";
 import { mulberry32 } from "./rng";
 import { createMarkers } from "./markers";
 import { enuToThree } from "../science/coords";
+import { procDensity, radialDensity } from "./cosmicSampling";
 
 /** cosmic katmanı (R3): birim 1 milyon ışık yılı, orijin Ankara (= Güneş). 2MRS galaksileri + "Buradasın" işareti. */
 export function createCosmicScene(data: Float32Array) {
@@ -18,16 +19,25 @@ export function createCosmicScene(data: Float32Array) {
     r[i] = data[k + 3] / 1000;                                       // bin ışık yılı → milyon
     kind[i] = data[k + 4]; ba[i] = data[k + 5]; rot[i] = rnd() * Math.PI;
   }
+  // Uzaktan eşit yoğunluklu örneklem için (cosmicSampling.ts): seçim etkisini taşıyan radyal yoğunluk ve tohumlu rastgele sayı
+  const dist = new Float32Array(n);
+  for (let i = 0; i < n; i++) dist[i] = Math.hypot(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+  const dens = radialDensity(dist), u = new Float32Array(n);
+  const rndU = mulberry32(7);
+  for (let i = 0; i < n; i++) u[i] = rndU();
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   geo.setAttribute("aR", new THREE.BufferAttribute(r, 1));
   geo.setAttribute("aKind", new THREE.BufferAttribute(kind, 1));
   geo.setAttribute("aBA", new THREE.BufferAttribute(ba, 1));
   geo.setAttribute("aRot", new THREE.BufferAttribute(rot, 1));
+  geo.setAttribute("aDens", new THREE.BufferAttribute(dens, 1));
+  geo.setAttribute("aU", new THREE.BufferAttribute(u, 1));
   const material = new THREE.ShaderMaterial({
     vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, depthTest: false,
     blending: THREE.AdditiveBlending, premultipliedAlpha: true,
-    uniforms: { uFocal: { value: 600 }, uPixelRatio: { value: 1 }, uOpacity: { value: 1 }, uMaxPx: { value: 48 } },
+    uniforms: { uFocal: { value: 600 }, uPixelRatio: { value: 1 }, uOpacity: { value: 1 }, uMaxPx: { value: 48 },
+      uNt: { value: 1e12 }, uFog: { value: 0 } },
   });
   const points = new THREE.Points(geo, material);
   points.frustumCulled = false;
@@ -35,12 +45,13 @@ export function createCosmicScene(data: Float32Array) {
   const home = createMarkers([{ pos: new THREE.Vector3(), size: 12, color: "#8FB8FF" }], 0);
   home.obj.renderOrder = 2;
   scene.add(points, home.obj);
-  return { scene, material, home, positions: pos, count: n };
+  return { scene, material, home, positions: pos, count: n, dens, u };
 }
 
 /**
- * 2MRS'in ötesi (R5, TEMSİLİ — gerçek galaksi konumları değil): ~1,3 milyar ışık yılından gözlemlenebilir evrenin kenarına
+ * 2MRS'in ötesi (R5, TEMSİLİ — gerçek galaksi konumları değil): 2MRS'in sınırından gözlemlenebilir evrenin kenarına
  * kadar, kozmik ağı andıran (sırt gürültüsüyle seçilmiş) galaksi noktaları. Aynı galaksi malzemesiyle çizilir.
+ * Uzaklık log-düzgün örneklenir (her ölçekte yeterli nokta); ekranda eşit yoğunluğa cosmicSampling ile seyreltilir.
  */
 export function createProceduralWeb(count: number, rMinMly: number, rMaxMly: number, material: THREE.ShaderMaterial) {
   const rnd = mulberry32(2026);
@@ -55,16 +66,17 @@ export function createProceduralWeb(count: number, rMinMly: number, rMaxMly: num
   };
   const CELL = 350;                                                  // tipik boşluk boyutu ölçeği (milyon ışık yılı)
   const pos = new Float32Array(count * 3), r = new Float32Array(count), kind = new Float32Array(count), ba = new Float32Array(count), rot = new Float32Array(count);
+  const dist = new Float32Array(count), u = new Float32Array(count);
   let n = 0, guard = 0;
   while (n < count && guard++ < count * 60) {
-    // hacimde düzgün: r³ düzgün
-    const rr = Math.cbrt(rMinMly ** 3 + rnd() * (rMaxMly ** 3 - rMinMly ** 3));
+    const rr = rMinMly * (rMaxMly / rMinMly) ** rnd();             // log-düzgün: yoğunluk ∝ r⁻³ (procDensity)
     const ct = rnd() * 2 - 1, ph = rnd() * Math.PI * 2, st = Math.sqrt(1 - ct * ct);
     const x = rr * st * Math.cos(ph), y = rr * ct, z = rr * st * Math.sin(ph);
     const ridge = 1 - Math.abs(noise(x / CELL, y / CELL, z / CELL) * 2 - 1);      // sırt: duvarlar ve iplikler
     if (rnd() > ridge ** 6) continue;
     pos.set([x, y, z], n * 3);
     r[n] = (20 + rnd() * 60) / 1000; kind[n] = rnd() < 0.6 ? 1 : 0; ba[n] = 0.3 + rnd() * 0.7; rot[n] = rnd() * Math.PI;
+    dist[n] = rr; u[n] = rnd();
     n++;
   }
   const geo = new THREE.BufferGeometry();
@@ -73,7 +85,10 @@ export function createProceduralWeb(count: number, rMinMly: number, rMaxMly: num
   geo.setAttribute("aKind", new THREE.BufferAttribute(kind.subarray(0, n), 1));
   geo.setAttribute("aBA", new THREE.BufferAttribute(ba.subarray(0, n), 1));
   geo.setAttribute("aRot", new THREE.BufferAttribute(rot.subarray(0, n), 1));
+  const dens = dist.subarray(0, n).map(x => procDensity(n, rMinMly, rMaxMly, x));
+  geo.setAttribute("aDens", new THREE.BufferAttribute(dens, 1));
+  geo.setAttribute("aU", new THREE.BufferAttribute(u.subarray(0, n), 1));
   const pts = new THREE.Points(geo, material);
   pts.frustumCulled = false;
-  return pts;
+  return { pts, n, rMin: rMinMly, rMax: rMaxMly };
 }
