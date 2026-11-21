@@ -36,6 +36,8 @@ export const en: Record<Key, string> = {
   "card.goHome": "Go home",
   "card.nodist": "Distance not measured",
   "card.light": "Light from there takes {t}",
+  "card.repTexture": "Surface texture is illustrative · size, axis and position are real",
+  "card.repGlow": "Glow is illustrative · disk and limb darkening to scale",
   "body.sun": "Sun",
   "body.earth": "Earth",
   "act2.forward": "Forward",

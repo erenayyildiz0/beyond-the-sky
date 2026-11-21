@@ -4,7 +4,7 @@ varying vec3 vColor;
 void main() {
   float r = length(gl_PointCoord - 0.5) * 2.0;
   float disk = 1.0 - smoothstep(0.7, 1.0, r);
-  float glow = exp(-r * r * 4.0) + 0.6 * exp(-r * 10.0);
+  float glow = (exp(-r * r * 4.0) + 0.6 * exp(-r * 10.0)) * (1.0 - smoothstep(0.75, 1.0, r));   // kenarda sıfıra in (köşeli sprite olmasın)
   float a = mix(disk, glow, uGlow) * uOpacity;
   if (a < 0.003) discard;
   gl_FragColor = vec4(vColor * a, a);

@@ -30,6 +30,10 @@ export interface SkyJson {
   voyager1: { enu_dir: number[]; dist_au: number; source: string };
   galaxies: Galaxy[];
   birth: { first_year: number; rows: [number, number, number][] };
+  realism: {
+    ankara_patch: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
+    poles_enu: Record<string, number[]>;
+  };
 }
 
 /** sky.json + sütun dizileri (CPU hesapları Float64Array ile, SPEC §3.3 eşlik kuralı). */
@@ -66,6 +70,8 @@ export interface Params {
   z: number | null;
   born: number | null;
   explore: boolean;
+  /** ?goto=moon|jupiter|saturn|… ya da durak anahtarı: uçuşta doğrudan oraya git (prova/test) */
+  goto: string | null;
 }
 
 export function readParams(search = location.search): Params {
@@ -80,6 +86,7 @@ export function readParams(search = location.search): Params {
     z: num("z"),
     born: num("born"),
     explore: q.get("explore") === "1",
+    goto: q.get("goto"),
   };
 }
 
@@ -142,6 +149,28 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: 
   const [sky, milkyWay] = await Promise.all([skyP, mwP, document.fonts.ready]);
   onProgress(1);
   return { sky, milkyWay, variant };
+}
+
+const texCache = new Map<string, Promise<THREE.Texture>>();
+
+/** public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). */
+export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: { srgb?: boolean } = {}): Promise<THREE.Texture> {
+  const hit = texCache.get(file);
+  if (hit) return hit;
+  const p = fetch(`${BASE}data/${file}`)
+    .then(r => { if (!r.ok) throw new Error(`${file}: ${r.status}`); return r.blob(); })
+    .then(b => createImageBitmap(b, { imageOrientation: "flipY" }))
+    .then(bmp => {
+      const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+      tex.flipY = false;
+      tex.colorSpace = opts.srgb === false ? THREE.NoColorSpace : THREE.SRGBColorSpace;
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.needsUpdate = true;
+      return tex;
+    });
+  texCache.set(file, p);
+  return p;
 }
 
 let earthTex: Promise<THREE.Texture> | null = null;

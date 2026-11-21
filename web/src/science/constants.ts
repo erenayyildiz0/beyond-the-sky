@@ -16,3 +16,7 @@ export const MOON_RADIUS_KM = 1_737.4;
 export const PLANET_RADIUS_KM: Record<string, number> = {
   mercury: 2_439.7, venus: 6_051.8, mars: 3_389.5, jupiter: 69_911, saturn: 58_232, uranus: 25_362, neptune: 24_622,
 };
+
+// Satürn halkaları (km): NASA Saturnian Rings Fact Sheet (nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html)
+export const SATURN_EQ_RADIUS_KM = 60_268;          // ekvator yarıçapı (NASA Saturn Fact Sheet)
+export const SATURN_RINGS_KM = { cIn: 74_658, bIn: 92_000, cassiniIn: 117_580, aIn: 122_170, aOut: 136_775 };

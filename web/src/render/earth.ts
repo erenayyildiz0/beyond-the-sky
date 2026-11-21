@@ -21,9 +21,14 @@ export function createEarthLayer(sky: Sky) {
   const blank = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
   blank.needsUpdate = true;
 
+  const pb = sky.realism.ankara_patch;
   const earthMat = new THREE.ShaderMaterial({
     vertexShader: vert, fragmentShader: frag,
-    uniforms: { uNight: { value: blank as THREE.Texture }, uSun: { value: sun }, uDay: { value: new THREE.Color("#0A1A33") }, uOpacity: { value: 1 } },
+    uniforms: {
+      uDay: { value: blank as THREE.Texture }, uNight: { value: blank as THREE.Texture }, uPatch: { value: blank as THREE.Texture },
+      uPatchBounds: { value: new THREE.Vector4(pb.lat_min, pb.lat_max, pb.lon_min, pb.lon_max) },
+      uHasDay: { value: 0 }, uHasPatch: { value: 0 }, uSun: { value: sun }, uOpacity: { value: 1 },
+    },
   });
   const earth = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), earthMat);
   earth.quaternion.copy(earthQuaternionFor(m.location.lat, m.location.lon));
@@ -32,7 +37,7 @@ export function createEarthLayer(sky: Sky) {
   const atmoMat = new THREE.ShaderMaterial({
     vertexShader: vert, fragmentShader: atmoFrag, transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending, premultipliedAlpha: true,
-    uniforms: { uColor: { value: new THREE.Color("#4A7BD8") }, uOpacity: { value: 1 } },
+    uniforms: { uColor: { value: new THREE.Color("#4A7BD8") }, uSun: { value: sun }, uOpacity: { value: 1 } },
   });
   const atmo = new THREE.Mesh(new THREE.SphereGeometry(1.02, 96, 48), atmoMat);
   atmo.renderOrder = 2;
@@ -47,10 +52,18 @@ export function createEarthLayer(sky: Sky) {
 
   // Ay: Ankara + topo-merkezli konum
   const moonPos = dirFromAltAz(m.moon.alt, m.moon.az).multiplyScalar(m.moon.distance_km / EARTH_RADIUS_KM).add(new THREE.Vector3(0, ankaraY, 0));
-  const moonMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: moonFrag, uniforms: { uSun: { value: sun }, uOpacity: { value: 1 } } });
+  const moonMat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: moonFrag,
+    uniforms: { uMap: { value: blank as THREE.Texture }, uHasMap: { value: 0 }, uSun: { value: sun }, uOpacity: { value: 1 } } });
   const MOON_R = MOON_RADIUS_KM / EARTH_RADIUS_KM;
-  const moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_R, 64, 32), moonMat);
+  const moon = new THREE.Mesh(new THREE.SphereGeometry(MOON_R, 128, 64), moonMat);
   moon.position.copy(moonPos);
+  { // Gelgit kilidi: yakın yüz (boylam 0 = yerel +x) Dünya'ya, kuzey kutbu IAU eksenine (libration yok sayıldı)
+    const X = moonPos.clone().negate().normalize();
+    const p = sky.realism.poles_enu.moon;
+    const Y = enuToThree(p[0], p[1], p[2]).normalize();
+    Y.addScaledVector(X, -Y.dot(X)).normalize();
+    moon.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, new THREE.Vector3().crossVectors(X, Y)));
+  }
   const ep = sky.frames.ecliptic_pole_enu;
   const orbit = circleLine(new THREE.Vector3(), enuToThree(ep[0], ep[1], ep[2]).normalize(), moonPos.length(), "#8FB8FF", 0.25);
 
@@ -62,6 +75,12 @@ export function createEarthLayer(sky: Sky) {
     originKm: new THREE.Vector3(0, -ankaraRadiusKm(m.location.height_m), 0),
     moonPos,
     setNightTexture(t: THREE.Texture) { earthMat.uniforms.uNight.value = t; },
+    setDayTexture(t: THREE.Texture) { earthMat.uniforms.uDay.value = t; earthMat.uniforms.uHasDay.value = 1; },
+    setPatchTexture(t: THREE.Texture) {
+      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
+      earthMat.uniforms.uPatch.value = t; earthMat.uniforms.uHasPatch.value = 1;
+    },
+    setMoonTexture(t: THREE.Texture) { moonMat.uniforms.uMap.value = t; moonMat.uniforms.uHasMap.value = 1; },
     applyWeight(w: number) {
       earthMat.uniforms.uOpacity.value = w;
       atmoMat.uniforms.uOpacity.value = w;

@@ -14,6 +14,7 @@ import pandas as pd
 
 from bts import PIPELINE_VERSION
 from bts.birth import birth_table
+from bts.bodies import bodies_meta
 from bts.catalog import index_of_hip, load_catalog
 from bts.config import Config, load_config
 from bts.fetch import fetch_all, require_black_marble
@@ -22,7 +23,9 @@ from bts.sky import (altaz_from_enu, choose_time, earth_location, ecliptic_pole_
                      icrs_to_enu_matrix, moon_info, moon_sun_alt, planets, star_altaz, sun_info, voyager1)
 from bts.visibility import count_visible, visible_mask
 
-SOURCES = ["HYG v4.1 (CC BY-SA 4.0)", "NASA SVS Deep Star Maps 2020", "NASA Black Marble 2016"]
+SOURCES = ["HYG v4.1 (CC BY-SA 4.0)", "NASA SVS Deep Star Maps 2020", "NASA Black Marble 2016",
+           "NASA Blue Marble Next Generation (Kasım 2004)", "NASA SVS 4720 / LRO (Ay)", "NASA/JPL/SSI Cassini PIA07782 (Jüpiter)",
+           "IAU WGCCRE 2015 (dönme eksenleri)"]
 MIN_MISS_LY = 0.5
 
 
@@ -142,6 +145,7 @@ def compute(cfg: Config, today_local: date | None = None, use_horizons=True, t=N
         "voyager1": voy,
         "galaxies": gal,
         "birth": {"first_year": cfg.birth.first_year, "rows": birth},
+        "realism": bodies_meta(cfg, R),
     }
     detail = {"version": 1, "fields": ["ci", "con", "spect"],
               "data": [[_num(c, 2), con, (s.strip() if isinstance(s, str) and s.strip() else None)]
@@ -216,6 +220,8 @@ def main() -> None:
         if has_earth:
             from bts.earth import build_earth
             written += build_earth(cfg, out)
+        from bts.bodies import build_bodies
+        written += build_bodies(cfg, out)
         sizes.update({p.name: p.stat().st_size for p in written})
     from bts.preview import build_previews
     build_previews(m, cfg.path(cfg.preview_dir), altaz8)

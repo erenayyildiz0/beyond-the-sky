@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
-import { loadEarthTexture } from "../app/assets";
+import { loadDataTexture, loadEarthTexture } from "../app/assets";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
 import { createDeepScene, layerFov, renderLayers, type ScaleLayer } from "../render/layers";
@@ -26,7 +26,7 @@ import { Ruler } from "../ui/ruler";
 import { getSkyWorld, type SkyWorld } from "./act1Lights";
 
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
-const SWITCH_KM = 15;
+const SWITCH_KM = 8;
 
 interface Target { key: string; name: string; posKm: THREE.Vector3; endKm: number; kind: "star" | "body" | "earth"; dly?: number | null }
 
@@ -67,10 +67,16 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     { name: "solar", scene: solar.scene, camera: cam(), unitKm: solar.unitKm, originKm: solar.originKm, weight: solarWeight,
       applyWeight: w => solar.applyWeight(w), nearFar: c => solar.nearFar(c) },
     { name: "earth", scene: earth.scene, camera: cam(), unitKm: earth.unitKm, originKm: earth.originKm,
-      weight: z => earthWeight(z) * smoothstep(12, 60, state.altKm),       // gece ışıkları yükselirken belirir
+      weight: z => earthWeight(z) * smoothstep(6, 25, state.altKm),        // gece ışıkları yükselirken belirir
       applyWeight: w => earth.applyWeight(w), nearFar: c => earth.nearFar(c) },
   ];
-  loadEarthTexture(ctx.renderer, ctx.assets.variant.earth).then(tex => earth.setNightTexture(tex)).catch(e => console.warn(e));
+  const r = ctx.renderer, big = ctx.assets.variant.earth === "8k";
+  loadEarthTexture(r, ctx.assets.variant.earth).then(tex => earth.setNightTexture(tex)).catch(e => console.warn(e));
+  // Gerçekçilik paketi R1: gündüz, Ankara karosu, Ay, Jüpiter (arka planda)
+  loadDataTexture(r, `earth_day_${big ? "8k" : "4k"}.jpg`).then(t => earth.setDayTexture(t)).catch(e => console.warn(e));
+  loadDataTexture(r, "ankara_night_2k.jpg").then(t => earth.setPatchTexture(t)).catch(e => console.warn(e));
+  loadDataTexture(r, `moon_${big ? "4k" : "2k"}.jpg`).then(t => earth.setMoonTexture(t)).catch(e => console.warn(e));
+  loadDataTexture(r, "planet_jupiter.jpg").then(t => solar.setJupiterTexture(t)).catch(e => console.warn(e));
 
   const route = routeFromSky(sky);
   const m = sky.meta;
@@ -153,7 +159,7 @@ export class Act2Flight implements Scene {
     this.buildUi();
     ctx.input.onTap = (x, y) => this.pick(x, y);
     if (startZ != null) {                                       // ?z= → bu ölçekte rotada başla (prova için)
-      const z = Math.min(Z_MAX, Math.max(3.6, startZ));
+      const z = Math.min(Z_MAX, Math.max(0, startZ));
       const r = this.w.route;
       const d = pathDir(z, r.U, r.uCas, r.uTarget, new THREE.Vector3());
       this.C.copy(d).multiplyScalar(10 ** z);
@@ -171,6 +177,12 @@ export class Act2Flight implements Scene {
     }
     ctx.director.setState("A2_FLIGHT");
     this.onResize(innerWidth, innerHeight);
+    const g = ctx.params.goto;
+    if (g) {
+      const body = this.w.bodies.find(b => b.key === g);
+      const si = this.w.stops.findIndex(s => s.key === g);
+      if (body) this.flyTo(body); else if (si >= 0) this.goStop(si);
+    }
   }
 
   private buildUi() {
@@ -397,7 +409,8 @@ export class Act2Flight implements Scene {
     su.uPixelRatio.value = pr;
     this.w.earth.update(z, this.time, alt);
     const voy = this.w.space.bodies.find(b => b.key === "voyager")!;
-    this.w.solar.update(pr, 1 - smoothstep(0.1, 0.5, Math.abs(z - Math.log10(voy.pos.length()))));
+    this.w.solar.update(pr, 1 - smoothstep(0.1, 0.5, Math.abs(z - Math.log10(voy.pos.length()))),
+      _v.copy(this.C).divideScalar(AU_KM), this.w.layers[1].camera.fov, innerHeight);
     // Yükselişte FOV Perde 1'inkinden katman FOV'una geçer
     const fov = this.act1Fov + (layerFov(innerWidth, innerHeight) - this.act1Fov) * smoothstep(Math.log10(SWITCH_KM), Math.log10(2000), Math.log10(Math.max(alt, 1e-3)));
     for (const L of this.w.layers) if (Math.abs(L.camera.fov - fov) > 1e-6) { L.camera.fov = fov; L.camera.updateProjectionMatrix(); }
@@ -410,7 +423,7 @@ export class Act2Flight implements Scene {
     const ly = D / LY_KM;
     this.ui.dist.textContent = `${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtDec(ly, ly < 10 ? 2 : ly < 1000 ? 1 : 0, lang)} ${t("act2.ly")}` : ""}`;
     this.ui.ruler.update(z);
-    const ew = earthWeight(z) * smoothstep(12, 60, alt), sw = solarWeight(z);
+    const ew = earthWeight(z) * smoothstep(6, 25, alt), sw = solarWeight(z);
     show(this.ui.lblEarth, ew > 0.5);
     show(this.ui.lblSolar, sw > 0.5);
     show(this.ui.lblStars, z > 11.8);
@@ -501,6 +514,8 @@ export class Act2Flight implements Scene {
       lines.push(`${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtDec(ly, ly < 10 ? 2 : 1, lang)} ${t("act2.ly")}` : ""}`);
       lines.push(t("card.light", { t: fmtLightTime(D / C_KM_S, lang) }));
     }
+    if (["mercury", "venus", "mars", "saturn", "uranus", "neptune"].includes(tg.key)) lines.push(t("card.repTexture"));
+    if (tg.key === "sun") lines.push(t("card.repGlow"));
     return { title: tg.name, lines, fly: tg.kind === "earth" ? "home" : "here" };
   }
 

@@ -35,6 +35,8 @@ export const tr = {
   "card.goHome": "Eve dön",
   "card.nodist": "Uzaklığı ölçülemedi",
   "card.light": "Işığın oradan gelmesi: {t}",
+  "card.repTexture": "Yüzey dokusu temsili · boyut, eksen ve konum gerçek",
+  "card.repGlow": "Hale temsili · disk ve kenar kararması gerçek ölçekte",
   "body.sun": "Güneş",
   "body.earth": "Dünya",
   "act2.forward": "İleri",

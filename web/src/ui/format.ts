@@ -33,9 +33,22 @@ export function fmtLightTime(s: number, lang: Lang = "tr") {
     : { s: ["second", "seconds"], m: ["minute", "minutes"], h: ["hour", "hours"], d: ["day", "days"], y: ["year", "years"] };
   const w = (u: keyof typeof T, n: number) => T[u][n === 1 ? 0 : 1];
   const Y = 365.25 * 86400;
-  if (s < 60) { const d = s < 10 ? 2 : 0; const n = +s.toFixed(d); return `${nf(n, d)} ${w("s", n)}`; }
-  if (s < 3600) { const m = Math.floor(s / 60), r = Math.round(s - 60 * m); return r ? `${nf(m)} ${w("m", m)} ${nf(r)} ${w("s", r)}` : `${nf(m)} ${w("m", m)}`; }
-  if (s < 86400 * 0.95) { const h = Math.floor(s / 3600), m = Math.round((s - 3600 * h) / 60); return m ? `${nf(h)} ${w("h", h)} ${nf(m)} ${w("m", m)}` : `${nf(h)} ${w("h", h)}`; }
+  if (s < 60) {
+    // çok kısa sürelerde anlamlı basamak (alçak irtifa): 0,00014 saniye
+    const d = s >= 10 ? 0 : s >= 0.01 ? 2 : Math.min(8, Math.max(2, Math.ceil(-Math.log10(Math.max(s, 1e-9))) + 1));
+    const n = +s.toFixed(d); return `${nf(n, d)} ${w("s", n)}`;
+  }
+  if (s < 3600) {
+    let m = Math.floor(s / 60), r = Math.round(s - 60 * m);
+    if (r === 60) { m += 1; r = 0; }                   // SPEC'teki koddan düzeltme: "41 dakika 60 saniye" olmasın
+    if (m === 60) return `${nf(1)} ${w("h", 1)}`;
+    return r ? `${nf(m)} ${w("m", m)} ${nf(r)} ${w("s", r)}` : `${nf(m)} ${w("m", m)}`;
+  }
+  if (s < 86400 * 0.95) {
+    let h = Math.floor(s / 3600), m = Math.round((s - 3600 * h) / 60);
+    if (m === 60) { h += 1; m = 0; }
+    return m ? `${nf(h)} ${w("h", h)} ${nf(m)} ${w("m", m)}` : `${nf(h)} ${w("h", h)}`;
+  }
   if (s < Y * 0.95) { const d = Math.round(s / 86400); return `${nf(d)} ${w("d", d)}`; }
   const y = s / Y;
   if (y < 100) { const n = +y.toFixed(1); return `${nf(n, 1)} ${w("y", n)}`; }

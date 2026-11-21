@@ -13,6 +13,14 @@ DOWNLOADS = {
     "milkyway_2020_4k.exr": SVS_BASE + "milkyway_2020_4k.exr",
     "starmap_2020_4k_print.jpg": SVS_BASE + "starmap_2020_4k_print.jpg",
 }
+NASA_ASSETS = "https://assets.science.nasa.gov/content/dam/science/"
+# Gerçekçilik paketi (docs/EXTRAS.md R1): Dünya gündüz, Ankara yüksek çözünürlüklü gece, Ay, Jüpiter
+DOWNLOADS_R1 = {
+    "world.200411.3x21600x10800.jpg": NASA_ASSETS + "esd/eo/images/bmng/bmng-base/november/world.200411.3x21600x10800.jpg",
+    "BlackMarble_2016_C1.jpg": NASA_ASSETS + "esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C1.jpg",
+    "lroc_color_poles_4k.tif": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_4k.tif",
+    "PIA07782.jpg": NASA_ASSETS + "psd/photojournal/pia/pia07/pia07782/PIA07782.jpg",
+}
 BLACK_MARBLE_PAGE = "https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps"
 # Sayfadaki "2016 Color → Global → 13500x6750 (3km) JPEG" bağlantısı (21.11.2026'da çalıştı)
 BLACK_MARBLE_URL = ("https://assets.science.nasa.gov/content/dam/science/esd/eo/images/imagerecords/"
@@ -56,7 +64,7 @@ def download(url: str, dest: Path, timeout: float = 60) -> Path:
 
 
 def fetch_all(raw_dir: Path) -> dict[str, Path]:
-    return {name: download(url, raw_dir / name) for name, url in DOWNLOADS.items()}
+    return {name: download(url, raw_dir / name, timeout=180) for name, url in {**DOWNLOADS, **DOWNLOADS_R1}.items()}
 
 
 def require_black_marble(path: Path) -> bool:

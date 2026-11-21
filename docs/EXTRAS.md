@@ -3,6 +3,18 @@
 SPEC v3'ün üstüne eklenen özellikler. Amaç: **kullanıcı kendi konumunda, kendi gökyüzünde neyden mahrum
 kaldığını görsün.** Ankara (Kızılay) varsayılan ve demo olarak kalır; SPEC'teki sayılar ve testler Ankara için geçerlidir.
 
+## R — Gerçekçilik paketi (karar: 21.11.2026)
+
+Kullanıcı geri bildirimi: galaksiye üstten bakılamıyor, kümelere gidilemiyor, Dünya/Ay/şehir gerçekçi değil.
+- **R1 — Dünya, Ankara, Ay, Güneş, gezegenler:** NASA Blue Marble (gündüz), Black Marble + Ankara 500 m/piksel karo (gece),
+  terminatör, okyanus yansıması, atmosfer; LRO Ay haritası ve gelgit kilidi; kenarı kararan Güneş; IAU dönme eksenleri;
+  Cassini Jüpiter haritası; diğer gezegenler temsili doku; Satürn halkaları gerçek yarıçaplarla.
+- **R2 — Samanyolu ve Yerel Grup:** üstten ve yandan bakılabilir, katmanlı disk + parçacıklar (temsili; konum ve yön gerçek).
+- **R3 — Kozmik ölçek:** 2MRS (~44.600 gerçek galaksi), H0 = 70 ile uzaklık, kümeler, kaçınma bölgesi; ~1,5 milyar ışık yılına kadar.
+- **R4 — Yıldızların gerçek boyutu ve boyut karşılaştırması** (kullanıcının ilham kaynağı "Star Size Comparison 2"):
+  yıldızın yanına gidince gerçek yarıçaplı küre (Stefan–Boltzmann ile L ve T'den, bilinen devler için yayımlanmış ölçümler);
+  Ay → Dünya → Jüpiter → Güneş → Sirius → Arcturus → Betelgeuse … yan yana karşılaştırma modu. Kaynaklı.
+
 ## P1 — Perde 1: ışık seviyesi ve gerçekçi Samanyolu (karar: 21.11.2026)
 
 - Basılı tutunca ışıklar söner, **bırakınca olduğu yerde kalır** (SPEC'te 3,5 sn'de geri geliyordu). Altta bir dimmer:

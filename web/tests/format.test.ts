@@ -19,6 +19,7 @@ describe("format (SPEC §6.9, §3.10)", () => {
   it("fmtLightTime", () => {
     const Y = 365.25 * 86400;
     expect(fmtLightTime(1.242)).toBe("1,24 saniye");
+    expect(fmtLightTime(417 / 299792.458)).toBe("0,0014 saniye");
     expect(fmtLightTime(492.2)).toBe("8 dakika 12 saniye");
     expect(fmtLightTime(4.08 * 3600)).toBe("4 saat 5 dakika");
     expect(fmtLightTime(86400)).toBe("1 gün");
@@ -26,6 +27,8 @@ describe("format (SPEC §6.9, §3.10)", () => {
     expect(fmtLightTime(26700 * Y)).toBe("27.000 yıl");
     expect(fmtLightTime(2.5e6 * Y)).toBe("2,5 milyon yıl");
     expect(fmtLightTime(492.2, "en")).toBe("8 minutes 12 seconds");
+    expect(fmtLightTime(41 * 60 + 59.6)).toBe("42 dakika");            // 60 saniye taşar
+    expect(fmtLightTime(2 * 3600 + 59.8 * 60)).toBe("3 saat");
     expect(fmtLightTime(1200 * Y, "en")).toBe("1,200 years");
   });
   it("fmtKm", () => {
