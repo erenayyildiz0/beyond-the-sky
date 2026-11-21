@@ -61,6 +61,7 @@ export class Act1Lights implements Scene {
   private ui!: {
     root: HTMLElement; place: HTMLElement; center: HTMLElement; hint: HTMLElement; count: HTMLElement;
     holdWrap: HTMLElement; ring: (p: number) => void; r1: HTMLElement; r2: HTMLElement; up: HTMLButtonElement;
+    dimmer: HTMLElement; dimInput: HTMLInputElement;
     names: HTMLElement;
   };
   private nameEls: { i: number; dir: THREE.Vector3; e: HTMLElement }[] = [];
@@ -106,12 +107,20 @@ export class Act1Lights implements Scene {
     el("span", "hold-dot", undefined, btn);
     el("div", "hold-label", t("act1.hold"), holdWrap);
     bindHoldButton(btn, this.hold);
+    // Dimmer: ışık seviyesini iki yöne ayarlar; bırakınca olduğu yerde kalır
+    const dimmer = el("label", "dimmer", undefined, root);
+    el("span", "dimmer-end", t("act1.lightsOn"), dimmer);
+    const dimInput = el("input", "", undefined, dimmer);
+    dimInput.type = "range"; dimInput.min = "0"; dimInput.max = "1"; dimInput.step = "0.001"; dimInput.value = "0";
+    dimInput.setAttribute("aria-label", t("act1.dimmer"));
+    dimInput.addEventListener("input", () => { this.hold.holding = false; this.autoHold = false; this.hold.target = +dimInput.value; });
+    el("span", "dimmer-end", t("act1.lightsOff"), dimmer);
     const r1 = el("div", "reveal poem", t("act1.reveal1"), root);
     const r2 = el("div", "reveal reveal2 poem", t("act1.reveal2", { n: fmtInt(m.counts.dark, lang) }), root);
     const up = el("button", "next-btn", `${t("act1.up")} ›`, root);
     up.addEventListener("click", () => this.goUp());
     const names = el("div", "names", undefined, root);
-    this.ui = { root, place, center, hint, count, holdWrap, ring, r1, r2, up, names };
+    this.ui = { root, place, center, hint, count, holdWrap, ring, r1, r2, up, names, dimmer, dimInput };
     requestAnimationFrame(() => { show(center); show(hint); });
 
     // "İsimleri göster": mag < 2 yıldızlar ve ufkun üstündeki gezegenler
@@ -132,8 +141,8 @@ export class Act1Lights implements Scene {
   private get controlsOn() { return this.t >= T.act1.introText; }
 
   onAction(a: Action) {
-    if (a === "holdStart" && this.controlsOn && !this.hold.locked) this.hold.holding = true;
-    else if (a === "holdEnd" && !this.autoHold) this.hold.holding = false;
+    if (a === "holdStart" && this.controlsOn && this.hold.p < 1) this.hold.holding = true;
+    else if (a === "holdEnd" && !this.autoHold) this.hold.holding = false;   // bırakınca olduğu yerde kalır
     else if (a === "next") {
       if (this.hold.locked) this.goUp();
       else if (this.controlsOn) this.autoHold = true;      // sunum kumandası: 7 sn otomatik basılı tutma
@@ -152,9 +161,10 @@ export class Act1Lights implements Scene {
     this.look.update(dt, ctx.input.dragging, ctx.input.keys);
     this.look.apply(this.cam);
 
-    if (this.autoHold && !hold.locked) hold.holding = true;
+    if (this.autoHold && hold.p < 1) hold.holding = true;
     hold.update(dt);
     if (hold.locked && this.lockedAt == null) { this.lockedAt = this.t; this.autoHold = false; }
+    if (hold.p >= 1) this.autoHold = false;
     ctx.director.setState(hold.locked ? "A1_REVEALED" : hold.holding || hold.p > 0 ? "A1_HOLDING" : "A1_CITY");
 
     // Gökyüzü durumu (§3.3–§3.5)
@@ -163,7 +173,8 @@ export class Act1Lights implements Scene {
     const dome = this.w.dome.material.uniforms;
     dome.uZenith.value.copy(SKY_COLORS.city.zenith).lerp(SKY_COLORS.dark.zenith, s.q);
     dome.uHorizon.value.copy(SKY_COLORS.city.horizon).lerp(SKY_COLORS.dark.horizon, s.q);
-    dome.uMWOpacity.value = s.mwOpacity;
+    dome.uMWOpacity.value = 1;
+    dome.uSkyLum.value = s.skyLum;
     dome.uM31Opacity.value = s.m31Opacity;
     dome.uMWGain.value = tune.uMWGain;
     dome.uExtK.value = k;
@@ -179,14 +190,17 @@ export class Act1Lights implements Scene {
     const target = countVisible(sky.starAlt, sky.starMag, s.sqm, s.glow, k);
     this.shown += (target - this.shown) * Math.min(1, dt * 12);
     const lang = getLang();
-    this.ui.count.textContent = t("act1.count", { n: fmtInt(hold.locked ? target : this.shown, lang) });
+    this.ui.count.textContent = t("act1.count", { n: fmtInt(Math.round(this.shown) === target ? target : this.shown, lang) });
     this.ui.ring(hold.p);
+    if (document.activeElement !== this.ui.dimInput) this.ui.dimInput.value = String(hold.p);
 
     // Zamanlama (§2.2)
     const ui = this.ui;
     const r2At = this.lockedAt == null ? Infinity : this.lockedAt + T.act1.reveal[1];
-    show(ui.count, this.controlsOn && this.t < r2At);       // ikinci satır sayıyı zaten söylüyor
-    show(ui.holdWrap, this.controlsOn && !hold.locked);
+    // ikinci satır sayıyı zaten söylüyor; ışıklar yeniden açılırsa sayaç geri gelir
+    show(ui.count, this.controlsOn && (this.t < r2At || hold.p < 0.999));
+    show(ui.holdWrap, this.controlsOn && hold.p < 1);
+    show(ui.dimmer, this.controlsOn);
     ui.holdWrap.classList.toggle("active", hold.holding);
     show(ui.center, this.t < T.act1.introText + 4 && hold.p < 0.05 && !hold.locked);
     show(ui.hint, this.t < T.act1.introText + 4 && !hold.locked);

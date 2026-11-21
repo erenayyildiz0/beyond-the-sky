@@ -43,7 +43,7 @@ html, body { margin: 0; height: 100dvh; background: var(--bg); overflow: hidden;
 #gl { width: 100%; height: 100%; touch-action: none; display: block; }
 #hud { color: var(--text); font-family: var(--font-ui); font-size: var(--size-body); pointer-events: none;
   text-shadow: 0 1px 12px rgba(0, 0, 0, .6); font-variant-numeric: tabular-nums; }
-#hud button, #hud .place, #hud input { pointer-events: auto; }
+#hud button, #hud .place, #hud input, #hud .dimmer { pointer-events: auto; }
 #fade { background: #000; opacity: 0; pointer-events: none; z-index: 20; }
 button { font: inherit; color: inherit; }
 
@@ -96,6 +96,10 @@ button { font: inherit; color: inherit; }
   background: var(--text); transition: transform .3s var(--ease); }
 .hold-wrap.active .hold-dot { transform: scale(.7); }
 .hold-label { font-size: var(--size-small); color: var(--muted); user-select: none; -webkit-user-select: none; }
+.dimmer { position: absolute; left: 50%; bottom: calc(6px + var(--safe-b)); transform: translateX(-50%); display: flex; align-items: center;
+  gap: 10px; font-size: 11px; color: var(--muted); user-select: none; -webkit-user-select: none; }
+.dimmer input { width: min(220px, 46vw); accent-color: var(--accent); touch-action: none; }
+.act1 .hold-wrap { bottom: calc(44px + var(--safe-b)); }
 .reveal { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: var(--size-hero); }
 .reveal2 { top: calc(40% + 1.5 * var(--size-hero)); font-size: calc(var(--size-hero) * .7); color: var(--text); }
 .next-btn { position: absolute; left: 50%; bottom: calc(36px + var(--safe-b)); transform: translateX(-50%);

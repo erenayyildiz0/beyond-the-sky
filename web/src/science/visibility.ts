@@ -39,6 +39,19 @@ export const smoothstep = (a: number, b: number, x: number) => {
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const easeInOutSine = (p: number) => -(Math.cos(Math.PI * p) - 1) / 2;
 
+/**
+ * Samanyolu görünürlüğü (onaylı sapma, SPEC §3.4'ün yerine; sezgisel): göz, gökyüzü arka planından yeterince
+ * parlak bölgeleri görür. Arka plan parlaklığı skyLum = 10^(−0,4·(SQM − 22)) (karanlık gökyüzü = 1).
+ * Doku pikselinin doğrusal parlaklığı L (kazanç sonrası) eşik T kadar azaltılır (göz arka planı çıkarır): görünür kesir
+ * (L − T) / L. Önce çekirdekler soluk ve yıkanmış belirir, gökyüzü karardıkça güçlenir ve sönük kısımlar ortaya çıkar.
+ * GLSL kopyası: render/shaders/skyDome.frag.glsl
+ */
+export const MW_FLOOR = 0.005, MW_SLOPE = 0.02;
+export const skyLum = (sqm: number) => 10 ** (-0.4 * (sqm - 22));
+export const mwThreshold = (sqm: number) => MW_FLOOR + MW_SLOPE * Math.max(skyLum(sqm) - 1, 0);
+/** Bir doku pikselinin görünür kesri (0..1) */
+export const mwVisible = (L: number, sqm: number) => Math.min(1, Math.max(0, (L - mwThreshold(sqm)) / Math.max(L, 1e-5)));
+
 /** Perde 1 ilerlemesi p → gökyüzü durumu (SPEC §3.3, §3.4). */
 export function act1SkyState(p: number, v: { sqm_city: number; sqm_dark: number; glow_city_mag: number; glow_dark_mag: number }) {
   const q = easeInOutSine(p);
@@ -46,7 +59,7 @@ export function act1SkyState(p: number, v: { sqm_city: number; sqm_dark: number;
   return {
     q, sqm,
     glow: lerp(v.glow_city_mag, v.glow_dark_mag, q),
-    mwOpacity: Math.pow(smoothstep(20.3, 21.7, sqm), 1.2),
+    skyLum: skyLum(sqm),
     m31Opacity: 0.35 * smoothstep(19.8, 21.0, sqm),
   };
 }

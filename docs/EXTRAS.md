@@ -3,6 +3,26 @@
 SPEC v3'ün üstüne eklenen özellikler. Amaç: **kullanıcı kendi konumunda, kendi gökyüzünde neyden mahrum
 kaldığını görsün.** Ankara (Kızılay) varsayılan ve demo olarak kalır; SPEC'teki sayılar ve testler Ankara için geçerlidir.
 
+## P1 — Perde 1: ışık seviyesi ve gerçekçi Samanyolu (karar: 21.11.2026)
+
+- Basılı tutunca ışıklar söner, **bırakınca olduğu yerde kalır** (SPEC'te 3,5 sn'de geri geliyordu). Altta bir dimmer:
+  ışıkları istediğin seviyeye getirir, yeniden açar. p bir kez 1'e ulaşınca açılış metinleri gelir; sonra da ayarlanabilir.
+- **Samanyolu kontrast eşiği** (SPEC §3.4'ün yerine, sezgisel): arka plan parlaklığı `skyLum = 10^(−0,4·(SQM − 22))`,
+  eşik `T = 0,005 + 0,02·(skyLum − 1)`, her doku pikselinin görünür kesri `(L − T) / L`. Göz arka planı çıkarır: SQM ~19,7'de
+  yalnızca en parlak çekirdekler soluk, 21'de çekirdekler belirgin, 22'de sönük kısımlar da. Yıldızların parlaktan sönüğe
+  belirişiyle tutarlı.
+
+## P2 — Perde 2: serbest uçuş (karar: 21.11.2026, M3b)
+
+SPEC §2.3 ve §6.5'teki "ray" (Ankara → Andromeda tek çizgi, yalnızca ileri/geri) yerine:
+- **Kesintisiz kalkış:** çatıdan (0,9 km) başlar; İleri basılı tutunca yükselirsin, km sayacı akar; siyah kesinti yok.
+  100 km'nin altında İleri hep yukarı götürür. 20 km civarında Perde 1 gökyüzünden katmanlı görüntüye geçilir.
+- **Serbest hareket:** İleri/Geri baktığın yöne; bakış serbest. Hız bulunduğun yerin ölçeğine göre (SPEC §6.12 `cruiseSpeed`, km cinsine genişletildi).
+- **Dokun → Buraya uç:** yıldızlar ve Güneş Sistemi cisimleri (Ay, Güneş, gezegenler, Voyager 1, Dünya).
+- **Rehberli duraklar:** "Sonraki durak ›" / PageDown–PageUp; duraklar gerçek ziyaret noktaları (Ay'ın yanı, Voyager'ın yanı…).
+- **Mesafe:** ışık süresinin altında km ("372.193 km", "20,8 kentilyon km") ve uzakta ışık yılı.
+- Katmanlı çizim (§6.5.1) aynen; kamera konumu raydan değil serbest konumdan gelir.
+
 Sıra: Faz 1 (M3–M6) bittikten sonra **E1 → E2**. Her ikisi de M2'nin gökyüzü çekirdeğini yeniden kullanır.
 
 ---

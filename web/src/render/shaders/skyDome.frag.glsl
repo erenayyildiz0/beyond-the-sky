@@ -1,6 +1,7 @@
 // SPEC §6.4 — hava kütlesi formülü §3.3 ile aynı
 uniform sampler2D uMW;
 uniform float uMWOpacity, uMWGain, uExtK, uSpace;
+uniform float uSkyLum, uMWFloor, uMWSlope;   // Samanyolu kontrast eşiği (visibility.ts mwThreshold ile aynı)
 uniform vec3 uZenith, uHorizon;
 uniform vec3 uM31Dir, uM31Major;       // M31 yönü ve büyük ekseni (three.js birim vektörleri)
 uniform float uM31Opacity;
@@ -19,7 +20,10 @@ void main() {
     float X = 1.0 / (sin(max(alt, 0.0)) + 0.50572 * pow(max(altDeg, 0.0) + 6.07995, -1.6364));
     ext = pow(10.0, -0.4 * uExtK * (X - 1.0));
   }
-  vec3 mw = texture2D(uMW, uv).rgb * uMWGain * uMWOpacity * ext;
+  vec3 mw = texture2D(uMW, uv).rgb * uMWGain;
+  float L = dot(mw, vec3(0.2126, 0.7152, 0.0722));
+  float T = uMWFloor + uMWSlope * max(uSkyLum - 1.0, 0.0);
+  mw *= clamp((L - T) / max(L, 1e-5), 0.0, 1.0) * uMWOpacity * ext;
   // Andromeda lekesi (§3.4): 3,2° × 1,0° elips
   vec3 minor = normalize(cross(uM31Dir, uM31Major));
   float a = dot(d, uM31Major) / 0.0279, b = dot(d, minor) / 0.0087;     // yarı eksenler (rad)

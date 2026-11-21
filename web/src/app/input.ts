@@ -4,16 +4,26 @@ export type Action =
   | "lookBack"                         // Perde 2 "Geriye bak"
   | "nextStop" | "prevStop";           // sunum kumandası (Perde 2)
 
-/** Perde 1 basılı tutma ilerlemesi (SPEC §6.4). */
+/**
+ * Perde 1 ışık seviyesi (SPEC §6.4, onaylı sapma: bırakınca geri gelmez).
+ * Basılı tutunca p artar (ışıklar söner), bırakınca olduğu yerde kalır; dimmer ile iki yöne ayarlanır.
+ * locked: p bir kez 1'e ulaştı (açılış metinleri tetiklendi). Sonra da ayarlanabilir.
+ */
 export class HoldControl {
   p = 0; holding = false; locked = false;
+  /** Dimmer'dan gelen hedef (null: yok) */
+  target: number | null = null;
   holdS: number; releaseS: number;
   constructor(holdS = 7, releaseS = 3.5) { this.holdS = holdS; this.releaseS = releaseS; }
   update(dt: number) {
-    if (this.locked) return;
-    this.p += this.holding ? dt / this.holdS : -dt / this.releaseS;
+    if (this.holding) { this.p += dt / this.holdS; this.target = null; }
+    else if (this.target != null) {
+      const step = dt / 0.35;                                  // dimmer'ı yumuşakça izle
+      this.p += Math.max(-step, Math.min(step, this.target - this.p));
+      if (Math.abs(this.target - this.p) < 1e-4) this.target = null;
+    }
     this.p = Math.min(1, Math.max(0, this.p));
-    if (this.p >= 1) { this.locked = true; this.holding = false; }
+    if (this.p >= 1 && !this.locked) { this.locked = true; this.holding = false; }
   }
 }
 
@@ -122,7 +132,7 @@ export function bindHoldButton(btn: HTMLElement, hold: HoldControl) {
   const start = (e: PointerEvent) => {
     e.preventDefault();
     btn.setPointerCapture(e.pointerId);
-    if (!hold.locked) hold.holding = true;
+    if (hold.p < 1) hold.holding = true;
   };
   const end = () => { hold.holding = false; };
   btn.addEventListener("pointerdown", start);

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import vert from "./shaders/skyDome.vert.glsl?raw";
 import frag from "./shaders/skyDome.frag.glsl?raw";
 import { enuToThree } from "../science/coords";
+import { MW_FLOOR, MW_SLOPE } from "../science/visibility";
 import type { Sky } from "../app/assets";
 
 /** Gökyüzü kubbesi: Samanyolu + gökyüzü rengi + Andromeda lekesi (SPEC §6.4). */
@@ -20,6 +21,9 @@ export function createSkyDome(sky: Sky, milkyWay: THREE.Texture) {
       uMW: { value: milkyWay },
       uMWOpacity: { value: 0 },
       uMWGain: { value: 1 },
+      uSkyLum: { value: 1 },
+      uMWFloor: { value: MW_FLOOR },
+      uMWSlope: { value: MW_SLOPE },
       uExtK: { value: sky.meta.visibility.extinction_k },
       uSpace: { value: 0 },
       uZenith: { value: new THREE.Color("#161B26") },
