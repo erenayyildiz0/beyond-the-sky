@@ -42,4 +42,9 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
   Cassini PIA07782 (Jüpiter) — NASA görüntüleri kamu malıdır.
 - Gök cisimlerinin dönme eksenleri: IAU WGCCRE 2015 (Archinal ve ark. 2018). Yarıçaplar ve Satürn halkaları:
   NASA Planetary / Saturnian Rings Fact Sheet.
+- 2MRS galaksi kataloğu (Huchra ve ark. 2012, ApJS 199, 26): uzaklık kırmızıya kaymadan, H0 = 70 km/s/Mpc. Küme üyeleri
+  (izdüşümde < 2 Mpc, hız farkı < 2.000 km/s) kümenin yayımlanmış uzaklığına sıkıştırıldı ("Tanrı parmakları" düzeltmesi, temsili).
+  Küme uzaklıkları: Başak — Mei ve ark. 2007; Fornaks — Blakeslee ve ark. 2009; diğerleri cz/H0 (Struble & Rood 1999).
+- Galaksi görünümleri (Samanyolu, Andromeda, Üçgen, Macellan Bulutları, 2MRS) temsilidir; konum, yön ve boyut gerçektir.
+  Samanyolu ölçüleri: Bland-Hawthorn & Gerhard 2016; çubuk açısı Wegg ve ark. 2015.
 - Merkür, Venüs, Mars, Satürn, Uranüs ve Neptün yüzey dokuları temsilidir (boyut, eksen ve konum gerçek); ekranda belirtilir.

@@ -2,7 +2,11 @@
 
 2MRS: Huchra ve ark. 2012, ApJS 199, 26 (tdc-www.harvard.edu/2mrs) — 43.533 galaksi, Ks ≤ 11,75, kırmızıya kayma ölçülmüş.
 Uzaklık d = cz / H0 (Hubble yasası). Yakın galaksilerde özhız baskın olduğundan cz < 500 km/s olanlar atlanır;
-Yerel Grup ayrıca çizilir. Kümelerde kırmızıya kayma yönünde uzama ("Tanrı parmakları") düzeltilmez; README'de belirtilir.
+Yerel Grup ayrıca çizilir.
+
+Tanrı parmakları (temsili sıkıştırma): küme üyelerinin özhızları cz/H0 uzaklıklarını bakış doğrultusunda ~10 Mpc yayar
+(Başak'ta izdüşüm yayılımının ~20 katı). Üyeler (izdüşümde < 2 Mpc, |cz − cz_küme| < 2.000 km/s) kümenin yayımlanmış
+uzaklığına konur; radyal saçılım, üyelerin izdüşümdeki saçılımına eşit alınır (küresel küme varsayımı, veriden).
 """
 from __future__ import annotations
 
@@ -17,6 +21,7 @@ from astropy.coordinates import SkyCoord
 H0 = 70.0                       # km/s/Mpc — yaygın uzlaşı değeri (Planck 2018: 67,4; SH0ES 2022: 73,0)
 MPC_TO_MLY = 3.261563777        # 1 Mpc = 3,2616 milyon ışık yılı
 CZ_MIN, CZ_MAX = 500.0, 30_000.0
+FOG_RPROJ_MPC, FOG_DV = 2.0, 2000.0
 
 # Bilinen kümeler (RA/Dec derece, uzaklık Mpc). Başak ve Fornaks: bağımsız uzaklık ölçümleri; diğerleri NED ortalama
 # hızından cz/H0. Kaynaklar: Mei ve ark. 2007 ApJ 655, 144 (Başak 16,5 Mpc); Blakeslee ve ark. 2009 ApJ 694, 556
@@ -52,7 +57,7 @@ def pretty_name(catid: str) -> str | None:
     s = str(catid).strip()
     if not s or s.lower() in ("none", "--"):
         return None
-    s = s.replace("MESSIER_", "M").replace("_", " ")
+    s = re.sub(r"^MESSIER_0*(\d+)", r"M\1", s).replace("_", " ")
     s = re.sub(r"^(NGC|IC|UGC|ESO|PGC) 0*(\d)", r"\1 \2", s)
     return s
 
@@ -63,11 +68,20 @@ def build_cosmic(cfg, R, out_dir: Path) -> tuple[list[Path], dict]:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         t = Table.read(cfg.path("raw/2mrs/catalog/2mrs_1175_done.fits"))
-    v = np.asarray(t["V"], float)
-    keep = (v >= CZ_MIN) & (v <= CZ_MAX)
-    t = t[keep]; v = v[keep]
-    d_mpc = v / H0
-    c = SkyCoord(ra=np.asarray(t["RA"], float) * u.deg, dec=np.asarray(t["DEC"], float) * u.deg)
+    v_all = np.asarray(t["V"], float)
+    c_all = SkyCoord(ra=np.asarray(t["RA"], float) * u.deg, dec=np.asarray(t["DEC"], float) * u.deg)
+    d_all = v_all / H0
+    member = np.zeros(len(t), bool)
+    rng = np.random.default_rng(7)
+    for key, _, _, ra, dec, dmpc in CLUSTERS:
+        rproj = np.radians(c_all.separation(SkyCoord(ra=ra * u.deg, dec=dec * u.deg)).deg) * dmpc
+        m = (rproj < FOG_RPROJ_MPC) & (np.abs(v_all - dmpc * H0) < FOG_DV) & ~member
+        if m.sum() >= 5:
+            d_all[m] = dmpc + rng.normal(0, rproj[m].std(), m.sum())
+            member |= m
+    keep = ((v_all >= CZ_MIN) | member) & (v_all <= CZ_MAX) & (d_all > 0)
+    t = t[keep]; v = v_all[keep]; d_mpc = d_all[keep]; is_member = member[keep]
+    c = c_all[keep]
     enu = R @ c.cartesian.xyz.value                                   # 3×N birim
     pos = (enu * (d_mpc * MPC_TO_MLY)).T                              # N×3, milyon ışık yılı
     k = np.asarray(t["MKC"], float)
@@ -91,6 +105,6 @@ def build_cosmic(cfg, R, out_dir: Path) -> tuple[list[Path], dict]:
         e = R @ SkyCoord(ra=ra * u.deg, dec=dec * u.deg).cartesian.xyz.value
         clusters.append({"key": key, "name_tr": tr, "name_en": en,
                          "enu_mly": [round(float(x), 3) for x in e * dmpc * MPC_TO_MLY], "dist_mly": round(dmpc * MPC_TO_MLY, 1)})
-    meta = {"count": int(len(data)), "fields": ["x", "y", "z", "r_kly", "kind", "ba"], "h0": H0,
+    meta = {"count": int(len(data)), "fog_members": int(is_member.sum()), "fields": ["x", "y", "z", "r_kly", "kind", "ba"], "h0": H0,
             "cz_range": [CZ_MIN, CZ_MAX], "max_mly": round(float(np.linalg.norm(pos, axis=1).max()), 0), "clusters": clusters}
     return [p, pn], meta

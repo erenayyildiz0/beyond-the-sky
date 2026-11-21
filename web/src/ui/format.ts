@@ -70,3 +70,10 @@ export function fmtKm(km: number, lang: Lang = "tr") {
   }
   return `${fmtInt(km, lang)} km`;
 }
+
+/** Işık yılı: 1 milyonun altında sayı ("4,25", "2.109"), üstünde "53,8 milyon" / "1,39 milyar". */
+export function fmtLy(ly: number, lang: Lang = "tr") {
+  if (ly >= 1e9) return `${fmtDec(ly / 1e9, 2, lang)} ${lang === "tr" ? "milyar" : "billion"}`;
+  if (ly >= 1e6) return `${fmtDec(ly / 1e6, 1, lang)} ${lang === "tr" ? "milyon" : "million"}`;
+  return fmtDec(ly, ly < 10 ? 2 : ly < 1000 ? 1 : 0, lang);
+}

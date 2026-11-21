@@ -66,7 +66,7 @@ export const tr = {
   "label.cosmic": "Gerçek konumlar (2MRS) · uzaklık kırmızıya kaymadan (H0 = 70) · görünüm temsili",
   "label.zoa": "Boş bant: kaçınma bölgesi — Samanyolu'nun tozu bu yönleri örtüyor",
   "act2.homeLG": "Buradasın · Yerel Grup",
-  "card.cosmic": "2MRS · uzaklık kırmızıya kaymadan (H0 = 70) · görünüm temsili",
+  "card.cosmic": "2MRS · uzaklık kırmızıya kaymadan (H0 = 70; küme üyeleri kümenin uzaklığına sıkıştırıldı) · görünüm temsili",
   "card.cluster": "Küme merkezi · yayımlanmış konum ve uzaklık",
   "card.kind0": "Eliptik ya da mercimek galaksi",
   "card.kind1": "Sarmal galaksi",

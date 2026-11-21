@@ -22,7 +22,7 @@ import {
   resolveCollisions, type Space,
 } from "../science/freeFlight";
 import { smoothstep } from "../science/visibility";
-import { fmtDec, fmtKm, fmtLightTime } from "../ui/format";
+import { fmtDec, fmtKm, fmtLightTime, fmtLy } from "../ui/format";
 import { el, show } from "../ui/hud";
 import { getLang, t } from "../ui/i18n";
 import { PickCard, type PickInfo } from "../ui/pickCard";
@@ -182,7 +182,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
       const pos = c.clone().addScaledVector(toHome, off * MLY_KM).addScaledVector(side, off * MLY_KM);
       return { pos, look: c.clone().sub(pos).normalize() };
     };
-    const vg = near("virgo", 7), cm = near("coma", 30);
+    const vg = near("virgo", 3), cm = near("coma", 10);
     stops.push({ key: "virgo", ...vg, z: Math.log10(vg.pos.length()) });
     stops.push({ key: "coma", ...cm, z: Math.log10(cm.pos.length()) });
     // Kozmik ağ: galaksi düzleminde 2,4 milyar ışık yılı uzaktan eve bakış — kaçınma bölgesi yandan, boş bir bant olarak görünür
@@ -566,7 +566,7 @@ export class Act2Flight implements Scene {
     const D = this.C.length();
     this.ui.lightVal.textContent = fmtLightTime(D / C_KM_S, lang);
     const ly = D / LY_KM;
-    this.ui.dist.textContent = `${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtDec(ly, ly < 10 ? 2 : ly < 1000 ? 1 : 0, lang)} ${t("act2.ly")}` : ""}`;
+    this.ui.dist.textContent = `${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtLy(ly, lang)} ${t("act2.ly")}` : ""}`;
     this.ui.ruler.update(z);
     const ew = earthWeight(z) * smoothstep(6, 25, alt), sw = solarWeight(z);
     show(this.ui.lblEarth, ew > 0.5);
@@ -650,6 +650,25 @@ export class Act2Flight implements Scene {
         }
       }
     }
+    if (!best && this.w.cosmic && cosmicWeight(z) > 0.3) {
+      // 2MRS galaksileri (20 px)
+      const cz = this.w.cosmic, P = cz.c.positions, cam = this.layerCam("cosmic");
+      let bi = -1, bd = 20;
+      for (let i = 0; i < cz.c.count; i++) {
+        const s2 = scr(_v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]), cam);
+        if (!s2) continue;
+        const dd = Math.hypot(s2.x - x, s2.y - y);
+        if (dd < bd) { bd = dd; bi = i; }
+      }
+      if (bi >= 0) {
+        const kind = Math.round(cz.data[bi * 6 + 4]);
+        const rMly = cz.data[bi * 6 + 3] / 1000;
+        best = { tg: { key: `g:${bi}`, name: cz.names.get(bi) ?? t("card.unnamed"),
+          posKm: new THREE.Vector3(P[bi * 3], P[bi * 3 + 1], P[bi * 3 + 2]).multiplyScalar(MLY_KM),
+          endKm: Math.max(4 * rMly, 0.3) * MLY_KM, kind: "galaxy", rKm: rMly * MLY_KM, cosmic: true,
+          note: `${t(`card.kind${Math.min(3, Math.max(0, kind))}` as "card.kind0")} · ${t("card.cosmic")}` }, d: bd };
+      }
+    }
     const chosen = best as { tg: Target; d: number } | null;
     if (!chosen) { this.ui.card.hide(); return; }
     this.selected = chosen.tg;
@@ -668,7 +687,7 @@ export class Act2Flight implements Scene {
     const lines: string[] = [];
     if (tg.kind !== "earth") {
       const ly = D / LY_KM;
-      lines.push(`${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtDec(ly, ly < 10 ? 2 : 1, lang)} ${t("act2.ly")}` : ""}`);
+      lines.push(`${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtLy(ly, lang)} ${t("act2.ly")}` : ""}`);
       lines.push(t("card.light", { t: fmtLightTime(D / C_KM_S, lang) }));
     }
     if (["mercury", "venus", "mars", "saturn", "uranus", "neptune"].includes(tg.key)) lines.push(t("card.repTexture"));

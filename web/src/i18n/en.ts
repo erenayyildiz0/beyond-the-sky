@@ -67,7 +67,7 @@ export const en: Record<Key, string> = {
   "label.cosmic": "Real positions (2MRS) · distance from redshift (H0 = 70) · appearance illustrative",
   "label.zoa": "Empty band: the zone of avoidance — Milky Way dust hides these directions",
   "act2.homeLG": "You are here · Local Group",
-  "card.cosmic": "2MRS · distance from redshift (H0 = 70) · appearance illustrative",
+  "card.cosmic": "2MRS · distance from redshift (H0 = 70; cluster members placed at the cluster distance) · appearance illustrative",
   "card.cluster": "Cluster center · published position and distance",
   "card.kind0": "Elliptical or lenticular galaxy",
   "card.kind1": "Spiral galaxy",
