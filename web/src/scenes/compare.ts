@@ -5,7 +5,7 @@ import type { Action } from "../app/input";
 import vert from "../render/shaders/planet.vert.glsl?raw";
 import planetFrag from "../render/shaders/planet.frag.glsl?raw";
 import { PLANET_LOOK } from "../render/solar";
-import { applyStarLook, createStarSurfaceMaterial, SUN_TINT } from "../render/starSurface";
+import { applyStarLook, createStarSurfaceMaterial } from "../render/starSurface";
 import { EARTH_RADIUS_KM, MOON_RADIUS_KM, PLANET_RADIUS_KM, SUN_RADIUS_KM } from "../science/constants";
 import { kelvinToRgb, PUBLISHED_RADII } from "../science/stars";
 import { smoothstep } from "../science/visibility";
@@ -74,9 +74,8 @@ export class Compare implements Scene {
     let mat: THREE.ShaderMaterial;
     if ("star" in it.look) {
       const [r, g, b] = kelvinToRgb(it.look.star);
-      mat = createStarSurfaceMaterial(1.3);
+      mat = createStarSurfaceMaterial(1.0);
       applyStarLook(mat, null, new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace), it.look.star, it.rKm / SUN_RADIUS_KM, x + 1);
-      if (it.key === "sun") mat.uniforms.uTint.value.set(...SUN_TINT);
     } else {
       const look = it.look;
       mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: planetFrag, uniforms: {

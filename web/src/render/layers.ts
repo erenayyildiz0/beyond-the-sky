@@ -33,6 +33,18 @@ export function renderLayers(r: THREE.WebGLRenderer, layers: ScaleLayer[], camPo
   }
 }
 
+/**
+ * Sahnedeki bütün malzemelerin gölgelendiricilerini önceden derle (gizli nesneler dahil). Yoksa her katman ekrana ilk
+ * geldiğinde tarayıcı derler ve o kare 50–400 ms takılır. compileAsync, destekleyen tarayıcıda (KHR_parallel_shader_compile)
+ * ana iş parçacığını bekletmez.
+ */
+export function precompile(r: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse(o => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  try { r.compileAsync(scene, camera).catch(() => {}); } catch { /* derleme hatası çizimde zaten görünür */ }
+  for (const o of hidden) o.visible = false;
+}
+
 /** Bütün katman kameraları aynı FOV: yatayda 60°, dikeyde 75° (§6.5.1). */
 export function layerFov(w: number, h: number) { return w / h >= 1 ? 60 : 75; }
 

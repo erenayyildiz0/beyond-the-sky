@@ -13,6 +13,7 @@ import { act1SkyState, countVisible, limitMag } from "../science/visibility";
 import { fmtDate, fmtDayMonth, fmtInt, fmtTime, isTonight } from "../ui/format";
 import { el, onMultiTap, progressRing, show } from "../ui/hud";
 import { getLang, t } from "../ui/i18n";
+import { prewarmFlight } from "./act2Flight";
 
 /** Perde 1 ve 3'ün paylaştığı gökyüzü dünyası; bir kez kurulur, dispose edilmez (SPEC §6.2, §6.10). */
 export interface SkyWorld {
@@ -78,6 +79,7 @@ export class Act1Lights implements Scene {
   private hold = new HoldControl(T.act1.hold, T.act1.release);
   private look = new SkyLook();
   private t = 0;
+  private prewarmed = false;
   private lockedAt: number | null = null;
   private autoHold = false;
   private shown = 0;
@@ -196,6 +198,11 @@ export class Act1Lights implements Scene {
     if (this.autoHold && hold.p < 1) hold.holding = true;
     hold.update(dt);
     if (hold.locked && this.lockedAt == null) { this.lockedAt = this.t; this.autoHold = false; ctx.audio?.swell(); }
+    if (this.lockedAt != null && !this.prewarmed && this.t - this.lockedAt > 1.5) {          // gökyüzü açıldıktan sonra, boşta
+      this.prewarmed = true;
+      const go = () => prewarmFlight(ctx);
+      if ("requestIdleCallback" in window) requestIdleCallback(go, { timeout: 3000 }); else setTimeout(go, 0);
+    }
     if (hold.p >= 1) this.autoHold = false;
     ctx.director.setState(hold.locked ? "A1_REVEALED" : hold.holding || hold.p > 0 ? "A1_HOLDING" : "A1_CITY");
 

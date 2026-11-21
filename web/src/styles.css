@@ -187,7 +187,8 @@ button { font: inherit; color: inherit; }
 .star-label.on { opacity: .85; }                     /* gizliyken saydam kalmalı (yoksa son konumunda donmuş görünür) */
 @media (max-width: 640px) { .stop-card { bottom: calc(160px + var(--safe-b)); } }
 .body-label.here { color: var(--accent); font-weight: 600; }
-.body-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
+.body-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap;
+  transition-duration: .25s; will-change: transform, opacity; }   /* hızlı solma; kendi katmanında taşınsın */
 @media (orientation: landscape) and (min-width: 700px) {
   .fly-controls { left: 50%; transform: translateX(-50%); }
   .layer-labels { bottom: calc(84px + var(--safe-b)); }

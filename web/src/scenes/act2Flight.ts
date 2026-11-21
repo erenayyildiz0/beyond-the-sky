@@ -17,7 +17,7 @@ import { AGE_GYR, CMB_DIST_MLY, lightTravelGyr } from "../science/cosmology";
 import { T } from "../app/timeline";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
-import { createDeepScene, layerFov, renderLayers, type ScaleLayer } from "../render/layers";
+import { createDeepScene, layerFov, precompile, renderLayers, type ScaleLayer } from "../render/layers";
 import { createFlightStarMaterial } from "../render/stars";
 import { createSolarLayer } from "../render/solar";
 import { createGalaxyParticles, createLayeredGalaxy, type GalaxyFrame } from "../render/galaxy";
@@ -76,6 +76,9 @@ const cosmicWeight = (z: number) => smoothstep(19.5, 20.3, z);
 
 let world: FlightWorld | null = null;
 
+/** Perde 1'de ışıklar söndükten sonra boşta çağrılır: uçuş dünyası, dokular ve gölgelendiriciler kalkıştan önce hazır olsun. */
+export function prewarmFlight(ctx: AppContext) { getFlightWorld(ctx); }
+
 function getFlightWorld(ctx: AppContext): FlightWorld {
   if (world) return world;
   const { sky, milkyWay } = ctx.assets;
@@ -120,7 +123,10 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   loadDataTexture(r, "ankara_night_2k.jpg").then(t => earth.setPatchTexture(t)).catch(e => console.warn(e));
   loadDataTexture(r, `moon_${big ? "4k" : "2k"}.jpg`).then(t => earth.setMoonTexture(t)).catch(e => console.warn(e));
   const sb = sky.smallbodies;
-  if (sb) loadSmallBodies().then(buf => solar.setSmallBodies(buf, sb.count, matchMedia("(pointer: coarse)").matches ? 0.35 : 1)).catch(e => console.warn(e));
+  if (sb) loadSmallBodies().then(buf => {
+    solar.setSmallBodies(buf, sb.count, matchMedia("(pointer: coarse)").matches ? 0.35 : 1);
+    precompile(ctx.renderer, solar.scene, layers.find(L => L.name === "solar")!.camera);
+  }).catch(e => console.warn(e));
   for (const k of ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"])
     loadDataTexture(r, `planet_${k}.jpg`).then(t => solar.setPlanetTexture(k, t)).catch(e => console.warn(e));
 
@@ -246,6 +252,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   (ctx.shared as Record<string, unknown>).__layers = layers;            // teşhis (yalnızca bellek)
   world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat };
   const w = world;
+  for (const L of layers) precompile(ctx.renderer, L.scene, L.camera);
   loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
   loadCosmic().then(({ data, names }) => {
     const c = createCosmicScene(data);
@@ -263,6 +270,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     c.scene.add(cmb.mesh);
     loadDataTexture(r, "cmb_2k.jpg").then(tx => { cmb.mat.uniforms.uMap.value = tx; }).catch(e => console.warn(e));
     w.cosmic = { c, names, data, webMat, cmb };
+    precompile(ctx.renderer, c.scene, camera);
   }).catch(e => console.warn(e));
   return world;
 }
@@ -276,6 +284,13 @@ interface Plan {
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3();
 const ease = (k: number) => smoothstep(0, 1, k);
+
+/** Etiketi taşı; yalnızca yarım pikselden fazla değiştiyse stile yaz (gereksiz stil yeniden hesaplaması olmasın) */
+function moveLabel(e: HTMLElement & { _x?: number; _y?: number }, x: number, y: number) {
+  if (e._x !== undefined && Math.abs(e._x - x) < 0.5 && Math.abs(e._y! - y) < 0.5) return;
+  e._x = x; e._y = y;
+  e.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+}
 
 export class Act2Flight implements Scene {
   private ctx!: AppContext;
@@ -300,7 +315,7 @@ export class Act2Flight implements Scene {
   private homeHold: number | null = null;
   private freeHintS = 0;
   private ui!: {
-    stopCard: StopCard; starLabels: { i: number; e: HTMLElement }[];
+    stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblBelts: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
@@ -430,7 +445,7 @@ export class Act2Flight implements Scene {
     birth.addEventListener("pointerdown", e => e.stopPropagation());
     const yourStar = el("div", "act3-star poem", "", root);
     const ring = el("div", "birth-ring", undefined, root);
-    const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root) }));
+    const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root), text: "" }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
     this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblBelts, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
@@ -1037,8 +1052,9 @@ export class Act2Flight implements Scene {
       show(e, vis);
       if (vis) {
         const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
-        e.style.transform = `translate(${x + 12}px, ${y - 10}px)`;
-        for (let dx = 0; dx < e.offsetWidth; dx += 60) placed.push({ x: x + dx, y });   // uzun etiket ("· Yerel Grup") boyunca
+        moveLabel(e, x + 12, y - 10);
+        const w = z > 20 ? 170 : 80;                                          // "Buradasın · Yerel Grup" / "Buradasın" (düzen okumadan)
+        for (let dx = 0; dx < w; dx += 60) placed.push({ x: x + dx, y });
       }
     }
     const solarCam = this.layerCam("solar"), earthCam = this.layerCam("earth");
@@ -1051,13 +1067,14 @@ export class Act2Flight implements Scene {
         cam = this.layerCam("deep"); _v.copy(b.posKm).divideScalar(LY_KM);
       } else if (b.key === "moon") { on = earthWeight(z) > 0.2 && alt > SWITCH_KM; cam = earthCam; _v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM); }
       else { on = solarWeight(z) > 0.2; _v.copy(b.posKm).divideScalar(AU_KM); }
-      if (!on) { show(e, false); continue; }
       _v.project(cam);
       const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
-      const vis = _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95
-        && !placed.some(p => Math.abs(p.x - x) < 70 && Math.abs(p.y - y) < 16);
+      const onScreen = _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
+      // Ekrandayken gizlense bile (solarak kaybolurken) cismi izlesin: yoksa son yerinde donmuş görünür
+      if (onScreen) moveLabel(e, x + 10, y - 10);
+      const vis = on && onScreen && !placed.some(p => Math.abs(p.x - x) < 70 && Math.abs(p.y - y) < 16);
       show(e, vis);
-      if (vis) { placed.push({ x, y }); e.style.transform = `translate(${x + 10}px, ${y - 10}px)`; }
+      if (vis) placed.push({ x, y });
     }
   }
 
@@ -1066,33 +1083,36 @@ export class Act2Flight implements Scene {
     const sky = this.ctx.assets.sky, P = this.w.space.starPosLy, cam = this.layerCam("deep"), lang = getLang();
     const mLim = exposureLimit(z), cands: { e: HTMLElement; x: number; y: number; c: number; text: string }[] = [];
     const cx = this.C.x / LY_KM, cy = this.C.y / LY_KM, cz = this.C.z / LY_KM;
+    const chosen = new Set<HTMLElement>();
     for (const L of this.ui.starLabels) {
-      show(L.e, false);
       if (z < 12.3 || z > 16.5) continue;
       const i = L.i, dly = sky.starDly[i];
       if (dly == null) continue;
       const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2];
-      if (apparentMag(sky.starMag[i], dly, Math.hypot(px - cx, py - cy, pz - cz)) > mLim - 0.5) continue;
       _v.set(px, py, pz).project(cam);
       if (_v.z >= 1 || _v.z <= -1 || Math.abs(_v.x) > 0.95 || Math.abs(_v.y) > 0.95) continue;
-      const ll = lightLeft(dly, sky.meta.obs_year_frac);
-      const dist = fmtDec(dly, dly < 100 ? 1 : 0, lang);
-      const name = sky.starName(i) ?? "";
-      const text = ll.bc ? t("act2.label.bc", { name, dist, bc: ll.bc })
-        : ll.approx ? t("act2.label.approx", { name, dist, yıl_de: trLocative(ll.year), year: ll.year })
-        : t("act2.label.star", { name, dist, yıl_de: trLocative(ll.year), year: ll.year });
-      cands.push({ e: L.e, x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, c: Math.hypot(_v.x, _v.y), text });
+      const x = (_v.x + 1) / 2 * innerWidth, y = (1 - _v.y) / 2 * innerHeight;
+      moveLabel(L.e, x + 10, y - 10);                                       // solarak kaybolurken de yıldızı izlesin
+      if (apparentMag(sky.starMag[i], dly, Math.hypot(px - cx, py - cy, pz - cz)) > mLim - 0.5) continue;
+      if (!L.text) {                                                         // metin değişmez: bir kez üret
+        const ll = lightLeft(dly, sky.meta.obs_year_frac);
+        const dist = fmtDec(dly, dly < 100 ? 1 : 0, lang);
+        const name = sky.starName(i) ?? "";
+        L.text = ll.bc ? t("act2.label.bc", { name, dist, bc: ll.bc })
+          : ll.approx ? t("act2.label.approx", { name, dist, yıl_de: trLocative(ll.year), year: ll.year })
+          : t("act2.label.star", { name, dist, yıl_de: trLocative(ll.year), year: ll.year });
+        L.e.textContent = L.text;
+      }
+      // Gösterilmekte olan etiket öncelikli (sıralama küçük değişimlerde yanıp sönmesin)
+      cands.push({ e: L.e, x, y, c: Math.hypot(_v.x, _v.y) - (L.e.classList.contains("on") ? 0.25 : 0), text: L.text });
     }
     const placed: { x: number; y: number }[] = [];
     cands.sort((a, b) => a.c - b.c).filter(c => {
       if (c.y > innerHeight - 220) return false;                                                    // kart ve düğme bölgesi
       if (placed.some(p => Math.abs(p.x - c.x) < 200 && Math.abs(p.y - c.y) < 18)) return false;   // çakışanları atla
       placed.push(c); return true;
-    }).slice(0, 4).forEach(c => {
-      c.e.textContent = c.text;
-      c.e.style.transform = `translate(${c.x + 10}px, ${c.y - 10}px)`;
-      show(c.e, true);
-    });
+    }).slice(0, 4).forEach(c => chosen.add(c.e));
+    for (const L of this.ui.starLabels) show(L.e, chosen.has(L.e));
   }
 
   onResize(w: number, h: number) {

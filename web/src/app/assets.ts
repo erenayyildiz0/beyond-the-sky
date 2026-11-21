@@ -163,6 +163,22 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: 
 const texCache = new Map<string, Promise<THREE.Texture>>();
 
 /** public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). */
+const uploads: { r: THREE.WebGLRenderer; tex: THREE.Texture; done: (t: THREE.Texture) => void }[] = [];
+/** Dokuyu ekran kartına önceden gönder; büyük dokular aynı karede yığılmasın diye karede bir tane. */
+function queueUpload(r: THREE.WebGLRenderer, tex: THREE.Texture): Promise<THREE.Texture> {
+  return new Promise(done => {
+    uploads.push({ r, tex, done });
+    if (uploads.length === 1) requestAnimationFrame(drainUploads);
+  });
+}
+function drainUploads() {
+  const u = uploads.shift();
+  if (!u) return;
+  u.r.initTexture(u.tex);
+  u.done(u.tex);
+  if (uploads.length) requestAnimationFrame(drainUploads);
+}
+
 export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: { srgb?: boolean } = {}): Promise<THREE.Texture> {
   const hit = texCache.get(file);
   if (hit) return hit;
@@ -177,7 +193,7 @@ export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opt
       tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       tex.wrapS = THREE.RepeatWrapping;
       tex.needsUpdate = true;
-      return tex;
+      return queueUpload(renderer, tex);         // ilk göründüğü karede takılmasın
     });
   texCache.set(file, p);
   return p;
@@ -197,7 +213,7 @@ export function loadEarthTexture(renderer: THREE.WebGLRenderer, variant: "8k" | 
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
       tex.needsUpdate = true;
-      return tex;
+      return queueUpload(renderer, tex);         // kalkışta değil, yüklenince gönder
     });
   return earthTex;
 }

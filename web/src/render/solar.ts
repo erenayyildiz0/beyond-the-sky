@@ -7,7 +7,7 @@ import ringVert from "./shaders/ring.vert.glsl?raw";
 import ringFrag from "./shaders/ring.frag.glsl?raw";
 import { dirFromAltAz, enuToThree } from "../science/coords";
 import { circleLine, createMarkers } from "./markers";
-import { applyStarLook, createCorona, createStarSurfaceMaterial, SUN_TINT } from "./starSurface";
+import { applyStarLook, createCorona, createStarSurfaceMaterial } from "./starSurface";
 import { kelvinToRgb } from "../science/stars";
 import { createSmallBodies } from "./smallBodies";
 
@@ -65,7 +65,6 @@ export function createSolarLayer(sky: Sky) {
   const corona = createCorona(sunPos.clone(), sunR, sunPole);
   const [sr, sg, sb] = kelvinToRgb(5772);                                                  // IAU 2015 B3: Teff = 5.772 K
   applyStarLook(sunMat, corona.mat, new THREE.Color().setRGB(sr, sg, sb, THREE.SRGBColorSpace), 5772, 1, 2026);
-  sunMat.uniforms.uTint.value.set(...SUN_TINT);
   let sunRPx = 0;
   const KIND = PLANET_LOOK;
   const blank = new THREE.DataTexture(new Uint8Array([200, 180, 150, 255]), 1, 1);

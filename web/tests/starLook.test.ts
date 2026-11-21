@@ -11,7 +11,7 @@ describe("yıldız yüzeyi görünümü", () => {
   });
   it("sıcak yıldızda granül kontrastı düşük, leke yok", () => {
     const r = starLook(12100, 78.9);                      // Rigel
-    expect(r.contrast).toBeLessThan(0.3);
+    expect(r.contrast).toBeLessThan(0.4);
     expect(r.spots).toBe(false);
   });
 });

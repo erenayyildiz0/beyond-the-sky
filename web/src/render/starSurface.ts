@@ -22,7 +22,7 @@ export function starLook(T: number, rSun: number) {
   const giant = THREE.MathUtils.smoothstep(rSun, 5, 30);
   return {
     cells: THREE.MathUtils.clamp(700 * rSun ** -0.75, 3, 3000),
-    contrast: 0.25 + 0.75 * cool,
+    contrast: 0.35 + 0.65 * cool,
     corona: (0.35 + 0.65 * cool) * (1 - 0.75 * giant),
     prom: (0.15 + 0.85 * cool) * (1 - giant),
     spots: T > 3000 && T < 6500,
@@ -41,14 +41,25 @@ export function createStarSurfaceMaterial(gain = 1) {
 }
 
 /** Yüzey ve çevre malzemelerini yıldıza göre ayarla; seed lekelerin ve çıkıntıların yerini belirler. */
+/**
+ * Görüntü tonu (sıcaklığa göre): filtreli yıldız/güneş fotoğraflarındaki gibi doygun. Soğuk ve Güneş benzeri yıldızlar
+ * altın-turuncu, sıcaklar mavi. Gerçekte 5.000–7.000 K yıldızlar gözle beyaza yakındır (renk için kelvinToRgb gerçek).
+ */
+export function starTint(T: number): [number, number, number] {
+  const warm = 1 - THREE.MathUtils.smoothstep(T, 6000, 8000), hot = THREE.MathUtils.smoothstep(T, 8000, 11000);
+  const mid: [number, number, number] = [1.0, 0.92, 0.8];
+  return [0, 1, 2].map(k => mid[k] + (SUN_TINT[k] - mid[k]) * warm + ([0.78, 0.88, 1.0][k] - mid[k]) * hot) as [number, number, number];
+}
+
 export function applyStarLook(surface: THREE.ShaderMaterial, corona: THREE.ShaderMaterial | null, color: THREE.Color, T: number, rSun: number, seed: number) {
   const look = starLook(T, rSun);
   const rnd = mulberry32(seed);
   surface.uniforms.uColor.value.copy(color);
+  surface.uniforms.uTint.value.set(...starTint(T));
   surface.uniforms.uCells.value = look.cells;
   surface.uniforms.uContrast.value = look.contrast;
   // Lekeler etkin enlemlerde (±8–30°); boyut 10.000–40.000 km (Güneş ölçeğinde)
-  const n = look.spots ? 2 + Math.floor(rnd() * 4) : 0;
+  const n = look.spots ? 3 + Math.floor(rnd() * 4) : 0;
   (surface.uniforms.uSpots.value as THREE.Vector4[]).forEach((s, i) => {
     if (i >= n) { s.set(0, 0, 0, 0); return; }
     const lat = (8 + 22 * rnd()) * (rnd() < 0.5 ? -1 : 1) * Math.PI / 180, lon = rnd() * Math.PI * 2;

@@ -60,7 +60,7 @@ void main() {
   }
   // Süpergranül ağı (~30.000 km) ve kenara yakın parlak fakülalar
   float net = noise(p * max(uCells * 0.035, 2.0) + uTime * 0.001);
-  float sg = 1.0 + 0.06 * uContrast * (net - 0.5);
+  float sg = 1.0 + 0.14 * uContrast * (net - 0.5);              // uzaktan da seçilen ağ dokusu
   float fac = 1.0 + 0.3 * uContrast * pow(1.0 - mu, 2.0) * smoothstep(0.6, 0.75, net);
 
   // Lekeler: koyu gölge (umbra), ışınsal lifli yarı gölge (penumbra)
