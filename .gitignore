@@ -1,0 +1,8 @@
+pipeline/raw/
+pipeline/.venv/
+pipeline/previews/
+pipeline/.pytest_cache/
+__pycache__/
+web/node_modules/
+web/dist/
+.DS_Store

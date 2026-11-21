@@ -1,0 +1,10 @@
+astropy>=6.0
+numpy>=1.26
+pandas>=2.1
+pillow>=10.0
+matplotlib>=3.8
+OpenEXR>=3.2
+pyyaml>=6.0
+requests>=2.31
+pytest>=8.0
+astroquery>=0.4.7      # opsiyonel: gezegen parlaklıkları ve Voyager 1 konumu (JPL Horizons)

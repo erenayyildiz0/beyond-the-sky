@@ -1,0 +1,72 @@
+location:
+  name: "Ankara"
+  name_ablative: "Ankara'dan"      # Türkçe metinler için
+  lat_deg: 39.9208
+  lon_deg: 32.8541
+  height_m: 890
+  tz: "Europe/Istanbul"
+
+observation:
+  time: "auto"                     # ya da "2026-12-08T21:00:00+03:00"
+  auto_local_hour: 21
+  auto_search_days: 30
+  max_moon_alt_deg: -10            # Ay bundan yüksekse o gece reddedilir
+  max_sun_alt_deg: -18             # astronomik karanlık
+
+catalog:
+  mag_limit: 7.0
+  nodist_shell_ly: 3500            # uzaklığı bilinmeyenlerin konduğu kabuk
+
+visibility:
+  sqm_city: 18.0                   # TODO: lightpollutionmap.info → World Atlas 2015 → Kızılay
+  sqm_dark: 22.0
+  glow_city_mag: 1.5
+  glow_dark_mag: 0.5
+  extinction_k: 0.25
+
+milkyway:
+  source: "raw/milkyway_2020_4k.exr"
+  orientation_check_image: "raw/starmap_2020_4k_print.jpg"
+  out_sizes: [[4096, 2048], [2048, 1024]]
+  webp_quality: 88
+
+earth:
+  source: "raw/BlackMarble_2016_3km.jpg"   # indirdiğin dosyanın adıyla eşleştir
+  out_sizes: [[8192, 4096], [4096, 2048]]
+  jpeg_quality: 85
+
+view:                              # Perde 1 başlangıç kadrajı (sky.json'a yazılır)
+  az_deg: 80                       # adaylar: 80 (doğu), 295 (batı-kuzeybatı)
+  horizon_screen_y: 0.80           # ufuk çizgisi ekranın üstünden %80'de
+  vfov_landscape_deg: 60
+  vfov_portrait_deg: 90
+
+flight:
+  path_constellation_hips: [746, 3179, 4427, 6686, 8886]   # Kraliçe'nin W'si → û_cas
+  path_target: "m31"
+  label_hips: [97649, 91262, 24608, 21421, 11767, 27989, 24436, 102098]
+  constellations:                  # 3D çizgiler (HIP çiftleri)
+    cas: [[746, 3179], [3179, 4427], [4427, 6686], [6686, 8886]]
+    ori: [[27989, 25336], [27989, 26727], [25336, 25930], [26727, 26311], [26311, 25930], [26727, 27366], [25930, 24436]]
+    cyg: [[102098, 100453], [100453, 95947], [102488, 100453], [100453, 97165]]
+    uma: [[54061, 53910], [53910, 58001], [58001, 59774], [59774, 54061], [59774, 62956], [62956, 65378], [65378, 67301]]
+  voyager1:                        # J2000; Horizons'a erişilirse (id -31) oradan güncelle
+    ra_deg: 258.658                # 17h 14m 38s (TheSkyLive, 2026)
+    dec_deg: 12.398                # +12° 23′ 54″
+    dist_au: 173.1
+  galaxies:                        # yön ve uzaklık gerçek; çizim temsili (§3.13)
+    - { key: m31, ra_deg: 10.6846, dec_deg: 41.2692, dist_ly: 2500000, draw_radius_ly: 110000, incl_deg: 77, pa_deg: 38 }
+    - { key: m33, ra_deg: 23.4621, dec_deg: 30.6602, dist_ly: 2730000, draw_radius_ly: 30000, incl_deg: 55, pa_deg: 23 }
+    - { key: lmc, ra_deg: 80.894, dec_deg: -69.756, dist_ly: 160000, draw_radius_ly: 7000 }
+    - { key: smc, ra_deg: 13.187, dec_deg: -72.829, dist_ly: 200000, draw_radius_ly: 3500 }
+
+birth:
+  mag_limit: 6.0
+  max_ly: 160
+  min_peak_alt_deg: 5              # dec > lat − 90 + 5
+  up_alt_deg: 5
+  prefer_up_tolerance_ly: 1.0
+  first_year: 1900
+
+output_dir: "../web/public/data"
+preview_dir: "previews"
