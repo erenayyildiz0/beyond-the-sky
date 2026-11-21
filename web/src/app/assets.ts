@@ -208,3 +208,13 @@ export function loadCosmic() {
   ]).then(([buf, names]) => ({ data: new Float32Array(buf), names: new Map(names.map(x => [x.i, x.name])) }));
   return cosmicP;
 }
+
+let detailP: Promise<{ ci: (number | null)[]; con: string[]; spect: (string | null)[] }> | null = null;
+/** catalog_detail.json (SPEC §5.14): B−V, takımyıldız, tayf; satır sırası sky.json ile aynı. Arka planda. */
+export function loadDetail() {
+  if (detailP) return detailP;
+  detailP = fetch(`${BASE}data/catalog_detail.json`).then(r => r.json()).then((j: { data: [number | null, string, string | null][] }) => ({
+    ci: j.data.map(r => r[0]), con: j.data.map(r => r[1]), spect: j.data.map(r => r[2]),
+  }));
+  return detailP;
+}

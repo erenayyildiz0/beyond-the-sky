@@ -66,8 +66,8 @@ export function pointPlan(C0: THREE.Vector3, P: THREE.Vector3) {
   return { dur: plan.dur, at: (s: number, out = new THREE.Vector3()) => (s >= 1 ? out.copy(P) : plan.at(s, out)) };
 }
 
-/** Çarpışma: Dünya yüzeyi (çatı), cisimler (minDistKm) ve en yakın yıldız (0,02 ışık yılı) — dışarı it. */
-export function resolveCollisions(C: THREE.Vector3, s: Space, nearStarIdx = -1) {
+/** Çarpışma: Dünya yüzeyi (çatı), cisimler (minDistKm) ve en yakın yıldız (varsayılan 0,02 ışık yılı; R4'te yarıçapın 1,5 katı) — dışarı it. */
+export function resolveCollisions(C: THREE.Vector3, s: Space, nearStarIdx = -1, starMinKm = STAR_MIN_LY * LY_KM) {
   const r = C.distanceTo(s.earthCenter);
   if (r < s.surfaceKm) C.sub(s.earthCenter).multiplyScalar(s.surfaceKm / Math.max(r, 1e-9)).add(s.earthCenter);
   for (const b of s.bodies) {
@@ -77,7 +77,7 @@ export function resolveCollisions(C: THREE.Vector3, s: Space, nearStarIdx = -1) 
   if (nearStarIdx >= 0) {
     const p = s.starPosLy, k = nearStarIdx * 3;
     const P = new THREE.Vector3(p[k], p[k + 1], p[k + 2]).multiplyScalar(LY_KM);
-    const d = C.distanceTo(P), m = STAR_MIN_LY * LY_KM;
+    const d = C.distanceTo(P), m = starMinKm;
     if (d < m) C.sub(P).multiplyScalar(m / Math.max(d, 1e-9)).add(P);
   }
   return C;

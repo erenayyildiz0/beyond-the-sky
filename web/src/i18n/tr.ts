@@ -72,6 +72,8 @@ export const tr = {
   "card.kind1": "Sarmal galaksi",
   "card.kind2": "Düzensiz galaksi",
   "card.kind3": "Galaksi",
+  "card.radiusMeasured": "Yarıçap: {r} Güneş · {km} ({src})",
+  "card.radiusComputed": "Yarıçap ≈ {r} Güneş (parlaklık ve sıcaklıktan hesaplandı; ~{t} K)",
   "card.unnamed": "Adsız 2MRS galaksisi",
   "ruler.earth": "Dünya",
   "ruler.moon": "Ay",

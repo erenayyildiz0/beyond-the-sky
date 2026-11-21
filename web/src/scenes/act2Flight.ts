@@ -1,7 +1,9 @@
 import * as THREE from "three";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
-import { loadCosmic, loadDataTexture, loadEarthTexture } from "../app/assets";
+import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture } from "../app/assets";
+import { createStarBodyLayer } from "../render/starBody";
+import { kelvinToRgb, starRadius } from "../science/stars";
 import { createCosmicScene } from "../render/cosmic";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
@@ -47,10 +49,13 @@ interface FlightWorld {
   stops: StoryStop[];
   bodies: Target[];
   /** her kare güncellenir: katman ağırlıkları ve near için */
-  state: { altKm: number; nearStarLy: number };
+  state: { altKm: number; nearStarLy: number; starW: number };
   galaxies: { key: string; layered: ReturnType<typeof createLayeredGalaxy>; particles: ReturnType<typeof createGalaxyParticles>; local: boolean }[];
   here: ReturnType<typeof createMarkers>;
   cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array } | null;
+  starBody: ReturnType<typeof createStarBodyLayer>;
+  starOrigin: THREE.Vector3;
+  detail: { ci: (number | null)[] } | null;
 }
 
 const MLY_KM = 1e6 * LY_KM;
@@ -70,11 +75,15 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   const deep = createDeepScene(sky, milkyWay, stars);
   const solar = createSolarLayer(sky);
   const earth = createEarthLayer(sky);
-  const state = { altKm: 1, nearStarLy: 4 };
+  const state = { altKm: 1, nearStarLy: 4, starW: 0 };
+  const starBody = createStarBodyLayer();
+  const starOrigin = new THREE.Vector3();
   const cam = () => new THREE.PerspectiveCamera(60, 1, 1, 10);
   const layers: ScaleLayer[] = [
     { name: "deep", scene: deep.scene, camera: cam(), unitKm: deep.unitKm, originKm: deep.originKm, weight: () => 1, applyWeight: () => {},
       nearFar: c => [Math.max(1e-9, Math.min(c.length() * 1e-4, state.nearStarLy * 0.3)), c.length() * 10 + 5e6] },
+    { name: "star", scene: starBody.scene, camera: cam(), unitKm: SUN_RADIUS_KM, originKm: starOrigin, weight: () => state.starW,
+      applyWeight: w => starBody.applyWeight(w), nearFar: c => starBody.nearFar(c) },
     { name: "solar", scene: solar.scene, camera: cam(), unitKm: solar.unitKm, originKm: solar.originKm, weight: solarWeight,
       applyWeight: w => solar.applyWeight(w), nearFar: c => solar.nearFar(c) },
     { name: "earth", scene: earth.scene, camera: cam(), unitKm: earth.unitKm, originKm: earth.originKm,
@@ -195,8 +204,9 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   if (gs) gs.look = mwCenter.clone().multiplyScalar(0.5 * LY_KM).sub(gs.pos).normalize();
   stops.sort((a, b) => a.z - b.z);
 
-  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null };
+  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null, starBody, starOrigin, detail: null };
   const w = world;
+  loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
   loadCosmic().then(({ data, names }) => {
     const c = createCosmicScene(data);
     const deepCam = layers.find(L => L.name === "deep")!.camera;
@@ -283,7 +293,10 @@ export class Act2Flight implements Scene {
     if (g) {
       const body = this.w.bodies.find(b => b.key === g);
       const si = this.w.stops.findIndex(s => s.key === g);
+      const hip = /^hip:(\d+)$/.exec(g);
+      const starIdx = hip ? ctx.assets.sky.stars.data.findIndex(r => r[7] === +hip[1]) : -1;
       if (body) this.flyTo(body); else if (si >= 0) this.goStop(si);
+      else if (starIdx >= 0) setTimeout(() => this.flyTo(this.starTarget(starIdx)), 1500);   // ayrıntı dosyası (B−V) gelsin
     }
   }
 
@@ -337,6 +350,32 @@ export class Act2Flight implements Scene {
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
     this.ui = { root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
+  }
+
+  private radiusCache = new Map<number, ReturnType<typeof starRadius>>();
+  private starBodyIdx = -1;
+
+  /** R4: yıldızın yarıçapı (yayımlanmış ya da hesaplanmış); km */
+  private starInfo(i: number) {
+    if (!this.radiusCache.has(i)) {
+      const sky = this.ctx.assets.sky, row = sky.stars.data[i];
+      const bv = this.w.detail?.ci[i] ?? 0.6;
+      this.radiusCache.set(i, starRadius(row[7], row[2], row[6], bv));
+    }
+    return this.radiusCache.get(i)!;
+  }
+
+  /** Yıldız hedefi: kart notu (yarıçap) ve "Buraya uç" mesafesi (yarıçapın 8 katı, R4) */
+  private starTarget(i: number): Target {
+    const sky = this.ctx.assets.sky, P = this.w.space.starPosLy;
+    const name = sky.starName(i) ?? "—";
+    const info = this.starInfo(i);
+    const lang = getLang();
+    const note = info ? (info.measured
+      ? t("card.radiusMeasured", { r: fmtDec(info.R, info.R < 10 ? 2 : 0, lang), km: fmtKm(info.R * SUN_RADIUS_KM, lang), src: info.source ?? "" })
+      : t("card.radiusComputed", { r: fmtDec(info.R, info.R < 10 ? 1 : 0, lang), t: fmtDec(Math.round(info.T / 10) * 10, 0, lang) })) : undefined;
+    return { key: `star:${i}`, name, posKm: new THREE.Vector3(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).multiplyScalar(LY_KM),
+      endKm: info ? Math.max(8 * info.R * SUN_RADIUS_KM, 2e6) : 0.05 * LY_KM, kind: "star", dly: sky.starDly[i], note };
   }
 
   private layerCam(name: ScaleLayer["name"]) { return this.w.layers.find(L => L.name === name)!.camera; }
@@ -443,9 +482,12 @@ export class Act2Flight implements Scene {
     if (throttle !== 0 || dz !== 0) { this.plan = null; this.moved = true; this.stopIdx = -1; }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
+    const sInfo = this.nearStar.i >= 0 ? this.starInfo(this.nearStar.i) : null;
+    const starRkm = sInfo ? sInfo.R * SUN_RADIUS_KM : 0;
     if (this.plan) this.stepPlan(dt);
     else {
-      const scale = Math.min(localScaleKm(this.C, space, this.nearStar.dLy), this.galaxyGapKm(Math.log10(Math.max(this.C.length(), 1e-3))));
+      const scale = Math.min(localScaleKm(this.C, space, this.nearStar.dLy), this.galaxyGapKm(Math.log10(Math.max(this.C.length(), 1e-3))),
+        Math.max(this.nearStar.dLy * LY_KM - starRkm, 1));                 // yıldızın yüzeyine uzaklık (R4)
       const target = cruiseSpeed(scale, throttle);
       const tau = throttle !== 0 ? 0.4 : 0.6;
       this.v += (target - this.v) * (1 - Math.exp(-dt / tau));
@@ -454,7 +496,7 @@ export class Act2Flight implements Scene {
       const dir = this.ascentAuto ? _v.copy(this.C).sub(space.earthCenter).normalize() : moveDirection(this.C, space, this.ori.f, _v);
       this.C.addScaledVector(dir, this.v * dt);
       if (dz) this.C.addScaledVector(this.ori.f, scale * dz * 2.3);
-      resolveCollisions(this.C, space, this.nearStar.i);
+      resolveCollisions(this.C, space, this.nearStar.i, sInfo ? Math.max(1.5 * starRkm, 1e5) : undefined);
     }
     const alt = altitudeKm(this.C, space);
 
@@ -471,12 +513,30 @@ export class Act2Flight implements Scene {
     if (!this.plan) this.ori.levelTo(freeUpRef(this.C, space, route.north, route.ngp), 1 - Math.exp(-dt / 0.5));
     if (!this.plan) this.ori.quaternion(this.q);
 
+    this.updateStarBody(sInfo);
     if (!this.ascentAuto) this.freeHintS += dt;
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
     this.w.state.altKm = alt;
     this.w.state.nearStarLy = this.nearStar.dLy;
     this.updateWorlds(z, alt);
     this.updateHud(z, alt, throttle);
+  }
+
+  /** R4: en yakın yıldızı gerçek boyutlu disk olarak göster (görünen yarıçap ~1 pikseli geçince) */
+  private updateStarBody(info: ReturnType<typeof starRadius>) {
+    const i = this.nearStar.i, st = this.w.state;
+    if (i < 0 || !info || this.w.state.altKm < 1e6) { st.starW = 0; return; }
+    const P = this.w.space.starPosLy;
+    this.w.starOrigin.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).multiplyScalar(LY_KM);
+    if (i !== this.starBodyIdx) {
+      const [cr, cg, cb] = kelvinToRgb(info.T);                    // yakından: beyaza karıştırılmamış gerçek renk
+      this.w.starBody.set(info.R, new THREE.Color().setRGB(cr, cg, cb, THREE.SRGBColorSpace));
+      this.starBodyIdx = i;
+    }
+    const cam = this.layerCam("star");
+    const rel = _v.copy(this.C).sub(this.w.starOrigin).divideScalar(SUN_RADIUS_KM);
+    const rPx = this.w.starBody.update(rel, cam.fov, innerHeight, this.ctx.renderer.getPixelRatio());
+    st.starW = smoothstep(0.5, 2.0, rPx);
   }
 
   private stepPlan(dt: number) {
@@ -645,8 +705,7 @@ export class Act2Flight implements Scene {
         if (!s) continue;
         const dd = Math.hypot(s.x - x, s.y - y);
         if (dd < 28 && (!best || dd < best.d)) {
-          const name = sky.starName(i) ?? "—";
-          best = { tg: { key: `star:${i}`, name, posKm: new THREE.Vector3(px, py, pz).multiplyScalar(LY_KM), endKm: 0.05 * LY_KM, kind: "star", dly: sky.starDly[i] }, d: dd };
+          best = { tg: this.starTarget(i), d: dd };
         }
       }
     }

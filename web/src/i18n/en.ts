@@ -73,6 +73,8 @@ export const en: Record<Key, string> = {
   "card.kind1": "Spiral galaxy",
   "card.kind2": "Irregular galaxy",
   "card.kind3": "Galaxy",
+  "card.radiusMeasured": "Radius: {r} Suns · {km} ({src})",
+  "card.radiusComputed": "Radius ≈ {r} Suns (computed from luminosity and temperature; ~{t} K)",
   "card.unnamed": "Unnamed 2MRS galaxy",
   "ruler.earth": "Earth",
   "ruler.moon": "Moon",
