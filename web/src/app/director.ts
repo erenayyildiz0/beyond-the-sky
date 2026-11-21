@@ -24,6 +24,8 @@ export interface Tunables {
 }
 
 export interface AppContext {
+  gyro: import("./gyro").Gyro;
+  audio: import("../audio/drone").Drone | null;
   renderer: THREE.WebGLRenderer;
   assets: Assets;
   params: Params;

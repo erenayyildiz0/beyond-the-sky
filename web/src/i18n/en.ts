@@ -5,6 +5,8 @@ export const en: Record<Key, string> = {
   "intro.place": "{place} · {date} · {time}",
   "intro.title": "Look up.",
   "intro.start": "Begin",
+  "explore.watchStory": "Watch the story",
+  "explore.skipToExplore": "Go to Explore",
   "intro.sound": "Best with sound · headphones recommended",
   "act1.now.tonight": "This is tonight's sky as seen from {place}.",
   "act1.now.date": "This is the sky you could see from {place} on {date}.",

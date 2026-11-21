@@ -4,6 +4,8 @@ import type { Action } from "../app/input";
 import { fmtDate, fmtTime } from "../ui/format";
 import { el, show } from "../ui/hud";
 import { getLang, setLang, t } from "../ui/i18n";
+import { Drone } from "../audio/drone";
+import { requestWakeLock } from "../app/wakeLock";
 
 /** INTRO (SPEC §6.7): siyah ekran, yer/tarih, "Başını kaldır.", "Başla". Jiroskop ve ses M6'da. */
 export class Intro implements Scene {
@@ -24,8 +26,18 @@ export class Intro implements Scene {
       place: m.location.name, date: fmtDate(m.time_local, m.tz, lang), time: fmtTime(m.time_local, m.tz, lang),
     }), root);
     el("h1", "intro-title poem", t("intro.title"), root);
-    const start = el("button", "start-btn", t("intro.start"), root);
-    start.addEventListener("click", () => this.start());
+    let seen = false;
+    try { seen = localStorage.getItem("bts.storySeen") === "1"; } catch { /* özel mod */ }
+    if (seen) {                                                // §6.7: hikâyeyi bitirene iki seçenek
+      const row = el("div", "intro-row", undefined, root);
+      const a = el("button", "start-btn", t("explore.watchStory"), row);
+      a.addEventListener("click", () => this.start());
+      const b = el("button", "start-btn", `${t("explore.skipToExplore")} ›`, row);
+      b.addEventListener("click", () => this.start("explore"));
+    } else {
+      const start = el("button", "start-btn", t("intro.start"), root);
+      start.addEventListener("click", () => this.start());
+    }
     el("div", "intro-sound", t("intro.sound"), root);
     const sw = el("div", "lang-switch", undefined, root);
     for (const l of ["tr", "en"] as const) {
@@ -41,8 +53,18 @@ export class Intro implements Scene {
     requestAnimationFrame(() => show(root));
   }
 
-  private start() {
-    // M6: AudioContext, jiroskop izni, Wake Lock ve tam ekran bu dokunuşun içinde istenecek.
+  private started = false;
+
+  /** "Başla": hepsi aynı dokunuşun içinde — ses, jiroskop izni (iOS), Wake Lock, dokunmatikte tam ekran (SPEC §6.7) */
+  private start(mode: "story" | "explore" = "story") {
+    if (this.started) return;
+    this.started = true;
+    const ctx = this.ctx;
+    try { if (!ctx.audio) { ctx.audio = new Drone(); } ctx.audio.start(); } catch { /* ses yok */ }
+    ctx.gyro.enable().catch(() => {});
+    requestWakeLock();
+    if (matchMedia("(pointer: coarse)").matches) document.documentElement.requestFullscreen?.().catch(() => {});
+    if (mode === "explore" || ctx.params.explore) { ctx.director.go("act2"); return; }
     if (this.ctx.params.compare) { this.ctx.director.go("compare"); return; }
     const z = this.ctx.params.z;
     if (z != null || this.ctx.params.goto) {                                     // ?z=15.3 → Perde 2 doğrudan bu ölçekten (§2.1)
@@ -52,7 +74,11 @@ export class Intro implements Scene {
   }
 
   onAction(a: Action) { if (a === "next") this.start(); }
-  update() {}
+  private tAuto = 0;
+  update(dt: number) {
+    this.tAuto += dt;
+    if (this.ctx.params.autoplay && this.tAuto > 1.5) this.start();      // ?autoplay=1 (yedek ekran kaydı)
+  }
   render(r: THREE.WebGLRenderer) { r.clear(); }
   onResize() {}
   exit() { this.root.remove(); }

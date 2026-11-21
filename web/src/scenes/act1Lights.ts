@@ -3,12 +3,12 @@ import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { bindHoldButton, HoldControl } from "../app/input";
 import { loadEarthTexture } from "../app/assets";
-import { frameSkyCamera, SkyLook } from "../app/look";
+import { frameSkyCamera, hFovDeg, SkyLook } from "../app/look";
 import { T } from "../app/timeline";
 import { createSkyDome, SKY_COLORS } from "../render/skyDome";
 import { createSkyline } from "../render/skyline";
 import { createPlanetGeometry, createSkyStarMaterial, createStarGeometry } from "../render/stars";
-import { dirFromAltAz } from "../science/coords";
+import { altAzFromDir, dirFromAltAz } from "../science/coords";
 import { act1SkyState, countVisible, limitMag } from "../science/visibility";
 import { fmtDate, fmtDayMonth, fmtInt, fmtTime, isTonight } from "../ui/format";
 import { el, onMultiTap, progressRing, show } from "../ui/hud";
@@ -155,9 +155,12 @@ export class Act1Lights implements Scene {
     });
   }
 
+  private goingUp = false;
   private goUp() {
-    if (this.lockedAt == null) return;
+    if (this.lockedAt == null || this.goingUp) return;
+    this.goingUp = true;
     this.ctx.shared.act1Look = { alt: this.look.alt, az: this.look.az };
+    this.ctx.audio?.takeoff();
     this.ctx.director.go("act2", true);                    // kalkış kendi karartmasını yapar (§6.5.4)
   }
 
@@ -179,18 +182,32 @@ export class Act1Lights implements Scene {
     const tune = ctx.tune;
 
     const d = ctx.input.consumeDrag();
-    this.look.drag(d.dx, d.dy, this.cam, innerWidth, innerHeight, dt);
-    this.look.update(dt, ctx.input.dragging, ctx.input.keys);
-    this.look.apply(this.cam);
+    if (ctx.gyro.active) {                                     // §6.3: mutlak jiroskop; yatay sürükleme "Kuzeyi düzelt"
+      if (d.dx) { ctx.gyro.yawOffsetDeg += d.dx * hFovDeg(this.cam) / innerWidth; ctx.gyro.compute(); }
+      this.cam.quaternion.slerp(ctx.gyro.q, 1 - Math.exp(-dt / 0.08));
+      const a = altAzFromDir(new THREE.Vector3(0, 0, -1).applyQuaternion(this.cam.quaternion));
+      this.look.set(a.altDeg, a.azDeg);
+    } else {
+      this.look.drag(d.dx, d.dy, this.cam, innerWidth, innerHeight, dt);
+      this.look.update(dt, ctx.input.dragging, ctx.input.keys);
+      this.look.apply(this.cam);
+    }
 
     if (this.autoHold && hold.p < 1) hold.holding = true;
     hold.update(dt);
-    if (hold.locked && this.lockedAt == null) { this.lockedAt = this.t; this.autoHold = false; }
+    if (hold.locked && this.lockedAt == null) { this.lockedAt = this.t; this.autoHold = false; ctx.audio?.swell(); }
     if (hold.p >= 1) this.autoHold = false;
     ctx.director.setState(hold.locked ? "A1_REVEALED" : hold.holding || hold.p > 0 ? "A1_HOLDING" : "A1_CITY");
 
     // Gökyüzü durumu (§3.3–§3.5)
     const s = applySkyState(ctx, this.w, hold.p, this.t);
+    ctx.audio?.setProgress(s.q);
+    this.ui.hint.textContent = ctx.gyro.active ? t("act1.raise") : t("act1.drag");
+    // ?autoplay=1: kendiliğinden basılı tut, açılıştan sonra yukarı çık
+    if (ctx.params.autoplay) {
+      if (this.controlsOn && !hold.locked) this.autoHold = true;
+      if (this.lockedAt != null && this.t - this.lockedAt > T.act1.reveal[1] + T.act1.reveal[2] + 2) this.goUp();
+    }
     const k = tune.extinctionK;
 
     // Sayaç: bütün gökyüzü (yalnızca ekrandaki değil), CPU'da Float64

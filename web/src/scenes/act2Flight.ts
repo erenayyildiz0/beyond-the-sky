@@ -488,6 +488,22 @@ export class Act2Flight implements Scene {
     }
   }
 
+  /** ?autoplay=1 (SPEC §6.5.6): yükseliş, durak durak ilerleme (her durakta bekleme), Andromeda'da doğum yılı ve dönüş */
+  private autoplay(near: string | null) {
+    if (!this.ctx.params.autoplay || this.phase === "return") return;
+    const dt = this.dtLast;
+    if (this.ascentAuto) { this.btnThrottle = altitudeKm(this.C, this.w.space) < 2000 ? 1 : 0; return; }
+    if (this.plan) { this.autoT = 0; return; }
+    this.autoT += dt;
+    if (near === "m31") { if (this.autoT > 4 && this.phase === "free") { this.openBirth(); } if (this.autoT > 7 && this.phase === "birth") this.startReturn(this.ctx.params.born); return; }
+    const extra = near === "bubble" || near === "galaxy" ? 2 : 0;
+    if (this.autoT > T.act2.autoplayDwellS + extra) {
+      const i = this.w.stops.findIndex(s => s.key === "m31");
+      const cur = this.stopIdx;
+      this.goStop(cur < 0 ? 0 : Math.min(i, cur + 1));
+    }
+  }
+
   /** §8 durak metni (sayılar sky.json ve sabitlerden) */
   private stopText(key: string) {
     const sky = this.ctx.assets.sky, m = sky.meta, lang = getLang();
@@ -599,6 +615,9 @@ export class Act2Flight implements Scene {
   // ---------- kare ----------
 
   private dtLast = 0;
+  private gyroLast: THREE.Quaternion | null = null;
+  private lastCard: string | null = null;
+  private autoT = 0;
   update(dt: number) {
     this.time += dt;
     this.dtLast = dt;
@@ -615,6 +634,17 @@ export class Act2Flight implements Scene {
       this.sinceUser = 0;
       if (altitudeKm(this.C, space) > 20) this.ascentAuto = false;
     }
+    // Jiroskop göreli (§6.3): son örnekten bu yana dönüşü bakışa uygula
+    const g = this.ctx.gyro;
+    if (g.active && !this.plan) {
+      if (this.gyroLast) {
+        const delta = this.gyroLast.clone().invert().multiply(g.q);
+        this.ori.setFromQuaternion(this.ori.quaternion().multiply(delta));
+        this.sinceUser = 0;
+        if (altitudeKm(this.C, space) > 20) this.ascentAuto = false;
+      }
+      this.gyroLast = (this.gyroLast ?? new THREE.Quaternion()).copy(g.q);
+    } else this.gyroLast = null;
     const k = 60 * dt;
     if (input.keys.has("ArrowLeft")) { this.ori.rotate(-k, 0); this.sinceUser = 0; this.plan = null; }
     if (input.keys.has("ArrowRight")) { this.ori.rotate(k, 0); this.sinceUser = 0; this.plan = null; }
@@ -790,6 +820,10 @@ export class Act2Flight implements Scene {
     for (const st of this.w.stops) if (this.C.distanceTo(st.pos) < 0.08 * st.pos.length()) { near = st.key; break; }
     this.ui.stopCard.set(this.phase === "free" ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
     this.updateBirthUi(z, near, this.dtLast);
+    if (near && near !== this.lastCard && this.phase === "free") this.ctx.audio?.chime();   // durakta zil
+    this.lastCard = near;
+    this.ctx.audio?.setFlight(z, Math.min(1, Math.abs(this.v) / Math.max(1e-9, 0.6 * localScaleKm(this.C, this.w.space, this.nearStar.dLy))) * 0.8);
+    this.autoplay(near);
     // Takımyıldız çizgileri (§6.5.5)
     this.w.bubbleMat.uniforms.uOpacity.value = smoothstep(15.7, 15.9, z) * (1 - smoothstep(16.6, 16.8, z));   // z ∈ [15,9; 16,6]
     this.w.lines.update(smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);

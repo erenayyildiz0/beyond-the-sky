@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
-import { frameSkyCamera, SkyLook } from "../app/look";
+import { frameSkyCamera, hFovDeg, SkyLook } from "../app/look";
 import { T } from "../app/timeline";
 import { dirFromAltAz } from "../science/coords";
 import { dirKey, trLocative } from "../science/years";
@@ -22,6 +22,7 @@ export class Act3Birth implements Scene {
   private p = 1;
   private star: number | null = null;
   private starDir = new THREE.Vector3();
+  private settled = false;
   private turn: { from: { alt: number; az: number }; to: { alt: number; az: number } } | null = null;
   private ui!: { root: HTMLElement; text: HTMLElement; ring: HTMLElement; arrow: HTMLElement; lights: HTMLElement; outro: HTMLElement; l1: HTMLElement; l2: HTMLElement; logo: HTMLElement; btns: HTMLElement };
 
@@ -71,6 +72,8 @@ export class Act3Birth implements Scene {
     const rs = el("button", "fly-small", t("outro.restart"), btns);
     rs.addEventListener("click", () => { ctx.shared = {}; ctx.director.go("intro"); });
     this.ui = { root, text: textEl, ring, arrow, lights, outro, l1, l2, logo, btns };
+    ctx.audio?.swell();                                          // A3_LAND
+    if (ctx.gyro.active && this.star != null) textEl.textContent += " " + t("act3.turn");
     requestAnimationFrame(() => show(textEl, !!text));
   }
 
@@ -83,6 +86,7 @@ export class Act3Birth implements Scene {
     const { ctx } = this;
     const d = ctx.input.consumeDrag();
     if (d.dx || d.dy) this.turn = null;
+    if (ctx.gyro.active) this.turn = null;
     if (this.turn) {
       const k = Math.min(1, this.t / 2);
       const e = k * k * (3 - 2 * k);
@@ -90,14 +94,21 @@ export class Act3Birth implements Scene {
       this.look.set(this.turn.from.alt + (this.turn.to.alt - this.turn.from.alt) * e, this.turn.from.az + dAz * e);
       if (k >= 1) this.turn = null;
     }
-    this.look.drag(d.dx, d.dy, this.cam, innerWidth, innerHeight, dt);
-    this.look.update(dt, ctx.input.dragging, ctx.input.keys);
-    this.look.apply(this.cam);
+    if (ctx.gyro.active) {                                     // gerçek yönelim; yıldız ekran dışındaysa yön oku
+      if (d.dx) { ctx.gyro.yawOffsetDeg += d.dx * hFovDeg(this.cam) / innerWidth; ctx.gyro.compute(); }
+      this.cam.quaternion.slerp(ctx.gyro.q, 1 - Math.exp(-dt / 0.08));
+    } else {
+      this.look.drag(d.dx, d.dy, this.cam, innerWidth, innerHeight, dt);
+      this.look.update(dt, ctx.input.dragging, ctx.input.keys);
+      this.look.apply(this.cam);
+    }
 
     // A3_LIGHTS: ışıklar 6 sn'de geri yanar (p 1 → 0)
     const L = T.act3.landHold, S = T.act3.lightsOnS;
     if (this.t > L) { ctx.director.setState("A3_LIGHTS"); this.p = Math.max(0, 1 - (this.t - L) / S); }
-    applySkyState(ctx, this.w, this.p, this.t);
+    const sky = applySkyState(ctx, this.w, this.p, this.t);
+    if (this.t > L) ctx.audio?.setProgress(sky.q);
+    if (this.t > L + S && !this.settled) { this.settled = true; ctx.audio?.settle(); }
     show(this.ui.text, this.t < L + S * 0.5 && !!this.ui.text.textContent);
     show(this.ui.lights, this.t > L + S * 0.6 && this.t < L + S + 3);
     // OUTRO (§2.5): iki satır sırayla, logo, düğmeler

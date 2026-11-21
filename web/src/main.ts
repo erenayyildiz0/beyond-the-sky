@@ -14,6 +14,8 @@ import { T } from "./app/timeline";
 import { el } from "./ui/hud";
 import { setLang, t } from "./ui/i18n";
 import { SciencePanel } from "./ui/sciencePanel";
+import { Gyro } from "./app/gyro";
+import { requestWakeLock } from "./app/wakeLock";
 
 async function main() {
   const params = readParams();
@@ -49,7 +51,7 @@ async function main() {
   };
   const input = new Input(canvas);
   const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare(), act3: () => new Act3Birth() });
-  const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {} };
+  const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {}, gyro: new Gyro(), audio: null };
   director.ctx = ctx;
   const panel = new SciencePanel(ctx, document.body);
   window.addEventListener("bts:toggleDebug", () => panel.toggle());
@@ -62,9 +64,18 @@ async function main() {
         else document.documentElement.requestFullscreen?.().catch(() => {});
         break;
       case "restart": ctx.shared = {}; director.go("intro"); break;
+      case "toggleMute": ctx.audio?.toggleMute(); break;
       default: director.action(a);
     }
   };
+
+  // Jiroskop anahtarı (SPEC §6.3): sağ altta; izin verildiyse görünür
+  const gyroBtn = el("button", "gyro-toggle", "", document.body);
+  gyroBtn.addEventListener("click", () => { ctx.gyro.enabled = !ctx.gyro.enabled; });
+  setInterval(() => {
+    gyroBtn.style.display = ctx.gyro.mode !== "off" && director.current !== "intro" ? "" : "none";
+    gyroBtn.textContent = ctx.gyro.enabled ? t("gyro.on") : t("gyro.off");
+  }, 300);
 
   const onResize = () => {
     renderer.setSize(innerWidth, innerHeight, false);
@@ -78,6 +89,7 @@ async function main() {
   let running = true;
   document.addEventListener("visibilitychange", () => {
     running = !document.hidden;
+    if (document.hidden) ctx.audio?.suspend(); else { ctx.audio?.resume(); requestWakeLock(); }
     last = performance.now();
     if (running) requestAnimationFrame(loop);
   });

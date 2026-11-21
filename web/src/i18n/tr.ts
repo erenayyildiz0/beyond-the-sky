@@ -4,6 +4,8 @@ export const tr = {
   "intro.place": "{place} · {date} · {time}",
   "intro.title": "Başını kaldır.",
   "intro.start": "Başla",
+  "explore.watchStory": "Hikâyeyi izle",
+  "explore.skipToExplore": "Keşfe geç",
   "intro.sound": "Sesli deneyim · kulaklık önerilir",
   "act1.now.tonight": "{place_ablative} bu gece görebileceğin gökyüzü bu.",
   "act1.now.date": "{place_ablative} {date} gecesi görebileceğin gökyüzü bu.",
