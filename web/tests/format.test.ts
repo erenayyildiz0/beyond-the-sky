@@ -30,6 +30,10 @@ describe("format (SPEC §6.9, §3.10)", () => {
     expect(fmtLightTime(41 * 60 + 59.6)).toBe("42 dakika");            // 60 saniye taşar
     expect(fmtLightTime(2 * 3600 + 59.8 * 60)).toBe("3 saat");
     expect(fmtLightTime(1200 * Y, "en")).toBe("1,200 years");
+    expect(fmtLightTime(2.4e9 * Y)).toBe("2,40 milyar yıl");             // milyondan sonra milyar
+    expect(fmtLightTime(13.79e9 * Y)).toBe("13,79 milyar yıl");
+    expect(fmtLightTime(320e6 * Y)).toBe("320 milyon yıl");
+    expect(fmtLightTime(2.4e9 * Y, "en")).toBe("2.40 billion years");
   });
   it("fmtLy", () => {
     expect(fmtLy(4.2465)).toBe("4,25");
@@ -44,6 +48,7 @@ describe("format (SPEC §6.9, §3.10)", () => {
     expect(fmtKm(149.6e6)).toBe("149,6 milyon km");
     expect(fmtKm(9.4607e12)).toBe("9,46 trilyon km");
     expect(fmtKm(2.08e19)).toBe("20,8 kentilyon km");
+    expect(fmtKm(4.4e23)).toBe("440,0 sekstilyon km");
     expect(fmtKm(372_193, "en")).toBe("372,193 km");
     expect(fmtKm(149.6e6, "en")).toBe("149.6 million km");
     expect(fmtKm(2.08e19, "en")).toBe("20.8 quintillion km");

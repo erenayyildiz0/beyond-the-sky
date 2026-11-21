@@ -37,7 +37,7 @@ export class Input {
   onAction: (a: Action) => void = () => {};
   onTap: (x: number, y: number) => void = () => {};
   dragDx = 0; dragDy = 0;              // son okumadan beri biriken sürükleme (px)
-  zoomDz = 0;                          // son okumadan beri pinch + tekerlek (z birimi; + = ileri, evden uzağa)
+  zoomDz = 0;                          // son okumadan beri pinch + tekerlek (+ = baktığın yöne ileri)
   dragging = false;
   keys = new Set<string>();
   private pointers = new Map<number, { x: number; y: number; t: number; moved: number }>();
@@ -86,9 +86,9 @@ export class Input {
     d.moved += Math.hypot(dx, dy);
     d.x = e.clientX; d.y = e.clientY;
     if (this.pointers.size === 2) {
-      // İki parmak (SPEC §6.5.3): içe sıkıştırmak = ileri (harita uygulamalarındaki gibi uzaklaşır)
+      // İki parmak: serbest uçuşta parmakları açmak = baktığın yöne ileri (yakınlaştırma gibi; SPEC'in tersi, onaylı sapma)
       const now = this.dist();
-      if (this.pinchDist > 0 && now > 0) this.zoomDz += 2 * Math.log10(this.pinchDist / now);
+      if (this.pinchDist > 0 && now > 0) this.zoomDz += 2 * Math.log10(now / this.pinchDist);
       this.pinchDist = now;
       return;
     }
@@ -106,7 +106,7 @@ export class Input {
   private wh = (e: WheelEvent) => {
     e.preventDefault();
     const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1;
-    this.zoomDz += e.deltaY * k * 0.0015;
+    this.zoomDz -= e.deltaY * k * 0.0015;                      // tekerlek yukarı = ileri (baktığın yöne)
   };
 
   private kd = (e: KeyboardEvent) => {

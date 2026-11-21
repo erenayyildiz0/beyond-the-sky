@@ -54,8 +54,12 @@ export function fmtLightTime(s: number, lang: Lang = "tr") {
   if (y < 100) { const n = +y.toFixed(1); return `${nf(n, 1)} ${w("y", n)}`; }
   if (y < 10000) { const n = Math.round(y); return `${nf(n)} ${w("y", n)}`; }
   if (y < 1e6) { const n = Math.round(y / 1000) * 1000; return `${nf(n)} ${w("y", n)}`; }
-  const n = +(y / 1e6).toFixed(1);
-  return lang === "tr" ? `${nf(n, 1)} milyon yıl` : `${nf(n, 1)} million years`;
+  if (y < 1e9 * 0.9995) {
+    const n = +(y / 1e6).toFixed(y < 1e8 ? 1 : 0);
+    return lang === "tr" ? `${nf(n, y < 1e8 ? 1 : 0)} milyon yıl` : `${nf(n, y < 1e8 ? 1 : 0)} million years`;
+  }
+  const n = +(y / 1e9).toFixed(2);                                       // milyondan sonra milyar
+  return lang === "tr" ? `${nf(n, 2)} milyar yıl` : `${nf(n, 2)} billion years`;
 }
 
 /** Mesafe (km): 1 milyonun altında tam sayı, üstünde "149,6 milyon km" … "20,8 kentilyon km". */
@@ -63,8 +67,8 @@ export function fmtKm(km: number, lang: Lang = "tr") {
   if (km < 10) return `${fmtDec(km, 1, lang)} km`;
   if (km < 1e6) return `${fmtInt(km, lang)} km`;
   const units: [number, string][] = lang === "tr"
-    ? [[1e18, "kentilyon"], [1e15, "katrilyon"], [1e12, "trilyon"], [1e9, "milyar"], [1e6, "milyon"]]
-    : [[1e18, "quintillion"], [1e15, "quadrillion"], [1e12, "trillion"], [1e9, "billion"], [1e6, "million"]];
+    ? [[1e24, "septilyon"], [1e21, "sekstilyon"], [1e18, "kentilyon"], [1e15, "katrilyon"], [1e12, "trilyon"], [1e9, "milyar"], [1e6, "milyon"]]
+    : [[1e24, "septillion"], [1e21, "sextillion"], [1e18, "quintillion"], [1e15, "quadrillion"], [1e12, "trillion"], [1e9, "billion"], [1e6, "million"]];
   for (const [v, w] of units) {
     if (km >= v) { const n = km / v; return `${fmtDec(n, n < 10 ? 2 : 1, lang)} ${w} km`; }
   }

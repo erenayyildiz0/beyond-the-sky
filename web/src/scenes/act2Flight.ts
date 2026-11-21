@@ -11,7 +11,9 @@ import { StopCard } from "../ui/stopCard";
 import { findBirthStar, lightLeft, trDurationLocative, trLocative } from "../science/years";
 import { PROXIMA_LY, SUN_GALACTOCENTRIC_LY, VOYAGER1_KM_S, VOYAGER1_LAUNCH_UTC, VOYAGER1_LIGHT_DAY_UTC } from "../science/constants";
 import { fmtInt } from "../ui/format";
-import { createCosmicScene } from "../render/cosmic";
+import { createCosmicScene, createProceduralWeb } from "../render/cosmic";
+import { createCmbSphere } from "../render/cmb";
+import { AGE_GYR, CMB_DIST_MLY, lightTravelGyr } from "../science/cosmology";
 import { T } from "../app/timeline";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
@@ -60,7 +62,8 @@ interface FlightWorld {
   state: { altKm: number; nearStarLy: number; starW: number };
   galaxies: { key: string; layered: ReturnType<typeof createLayeredGalaxy>; particles: ReturnType<typeof createGalaxyParticles>; local: boolean }[];
   here: ReturnType<typeof createMarkers>;
-  cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array } | null;
+  cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array;
+    webMat: THREE.ShaderMaterial; cmb: ReturnType<typeof createCmbSphere> } | null;
   starBody: ReturnType<typeof createStarBodyLayer>;
   lines: ReturnType<typeof createConstellationLines>;
   bubbleMat: THREE.ShaderMaterial;
@@ -217,6 +220,9 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     // Kozmik ağ: galaksi düzleminde 2,4 milyar ışık yılı uzaktan eve bakış — kaçınma bölgesi yandan, boş bir bant olarak görünür
     const webPos = gy.clone().multiplyScalar(2400 * MLY_KM);
     stops.push({ key: "cosmicWeb", pos: webPos, look: webPos.clone().negate().normalize(), z: Math.log10(webPos.length()) });
+    // Gözlemlenebilir evren (R5): kürenin dışından, temsili bakış
+    const obsPos = gy.clone().add(gz.clone().multiplyScalar(0.4)).normalize().multiplyScalar(3.4 * CMB_DIST_MLY * MLY_KM);
+    stops.push({ key: "observable", pos: obsPos, look: obsPos.clone().negate().normalize(), z: Math.log10(obsPos.length()) });
   }
 
   // "Galaksinin dışı": eve değil, Güneş ile galaksi merkezinin ortasına bak (galaksi kadraja sığsın)
@@ -235,7 +241,14 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     layers.unshift({ name: "cosmic", scene: c.scene, camera, unitKm: MLY_KM, originKm: new THREE.Vector3(), weight: cosmicWeight,
       applyWeight: wt => { c.material.uniforms.uOpacity.value = wt; c.home.material.uniforms.uOpacity.value = wt; },
       nearFar: v => [Math.max(1e-5, v.length() * 1e-3), v.length() * 10 + 5000] });
-    w.cosmic = { c, names, data };
+    // R5: 2MRS'in ötesi (temsili) ve gözlemlenebilir evrenin sınırı (Planck CMB)
+    const webMat = c.material.clone();
+    const phone = matchMedia("(pointer: coarse)").matches;
+    c.scene.add(createProceduralWeb(phone ? 40_000 : 120_000, 1300, CMB_DIST_MLY * 0.97, webMat));
+    const cmb = createCmbSphere(CMB_DIST_MLY, sky.frames.gal_to_enu);
+    c.scene.add(cmb.mesh);
+    loadDataTexture(r, "cmb_2k.jpg").then(tx => { cmb.mat.uniforms.uMap.value = tx; }).catch(e => console.warn(e));
+    w.cosmic = { c, names, data, webMat, cmb };
   }).catch(e => console.warn(e));
   return world;
 }
@@ -274,10 +287,10 @@ export class Act2Flight implements Scene {
   private freeHintS = 0;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement }[];
-    toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement;
+    toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
-    lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement; lblCosmic: HTMLElement; lblZoa: HTMLElement;
+    lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement; lblCosmic: HTMLElement; lblZoa: HTMLElement; lblWeb: HTMLElement; lblCmb: HTMLElement;
     bodyLabels: { b: Target; e: HTMLElement }[]; card: PickCard; extra: HTMLElement;
   };
 
@@ -334,6 +347,7 @@ export class Act2Flight implements Scene {
     el("div", "light-label", t("act2.light", { place_ablative: m.location.name_ablative, place: m.location.name }), light);
     const lightVal = el("div", "light-value", "", light);
     const dist = el("div", "light-dist", "", light);
+    const cosmoNote = el("div", "light-dist cosmo-note", t("act2.cosmoNote"), light);
     const ruler = new Ruler(root, this.w.stops.map(s => ({ key: s.key, z: s.z })), s => this.goStop(this.w.stops.findIndex(x => x.key === s.key)));
     show(ruler.root);
     const hint = el("div", "fly-hint", t("act2.ascend"), root);
@@ -341,6 +355,7 @@ export class Act2Flight implements Scene {
     const controls = el("div", "fly-controls on", undefined, root);
     const mk = (label: string, dir: number) => {
       const b = el("button", "fly-btn", label, controls);
+      (dir > 0 ? this.btnLabels : this.btnLabels).push(b);
       const start = (e: PointerEvent) => { e.preventDefault(); b.setPointerCapture(e.pointerId); this.btnThrottle = dir; this.plan = null; b.classList.add("down"); };
       const end = () => { if (this.btnThrottle === dir) this.btnThrottle = 0; b.classList.remove("down"); };
       b.addEventListener("pointerdown", start);
@@ -376,6 +391,8 @@ export class Act2Flight implements Scene {
     const hereLabel = el("div", "body-label here", t("act2.here"), root);
     const lblCosmic = el("div", "layer-label", t("label.cosmic"), labels);
     const lblZoa = el("div", "layer-label", t("label.zoa"), labels);
+    const lblWeb = el("div", "layer-label", t("label.web"), labels);
+    const lblCmb = el("div", "layer-label", t("label.cmb"), labels);
     const order = ["cl:virgo", "cl:coma", "cl:fornax", "cl:perseus", "cl:centaurus", "cl:hydra", "cl:norma", "cl:shapley", "mw", "m31", "m33", "lmc", "smc", "moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
     const bodyLabels = this.w.bodies.filter(b => b.kind !== "earth")
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
@@ -401,7 +418,7 @@ export class Act2Flight implements Scene {
     const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root) }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
-    this.ui = { toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
+    this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
   }
 
   private radiusCache = new Map<number, ReturnType<typeof starRadius>>();
@@ -534,6 +551,7 @@ export class Act2Flight implements Scene {
         return t(`stop.${key}` as "stop.virgo", { d: c ? fmtDec(c.dist_mly, 0, lang) : "?" });
       }
       case "cosmicWeb": return t("stop.cosmicWeb", { n: fmtInt(sky.cosmic?.count ?? 0, lang) });
+      case "observable": return t("stop.observable", { age: fmtDec(AGE_GYR, 1, lang), r: fmtDec(CMB_DIST_MLY / 1000, 1, lang) });
       default: return t(`stop.${key}` as "stop.earth");
     }
   }
@@ -544,7 +562,10 @@ export class Act2Flight implements Scene {
   private galaxyGapKm(z: number) {
     let best = Infinity;
     if (z < 16) return best;
-    for (const g of this.w.galaxies) best = Math.min(best, this.C.distanceTo(_v.copy(g.layered.frame.center).multiplyScalar(LY_KM)) - g.layered.shape.halfLy * LY_KM);
+    for (const g of this.w.galaxies) {
+      const gap = this.C.distanceTo(_v.copy(g.layered.frame.center).multiplyScalar(LY_KM)) - g.layered.shape.halfLy * LY_KM;
+      if (gap > 0) best = Math.min(best, gap);                  // içindeysen (Samanyolu) sayma — yoksa hız ~0'a düşüp takılıyordu
+    }
     const cz = this.w.cosmic;
     if (cz && z > 19) {
       const P = cz.c.positions, cx = this.C.x / MLY_KM, cy = this.C.y / MLY_KM, czz = this.C.z / MLY_KM;
@@ -555,6 +576,7 @@ export class Act2Flight implements Scene {
         if (d2 < b2) b2 = d2;
       }
       best = Math.min(best, Math.sqrt(b2) * MLY_KM);
+      best = Math.min(best, Math.max(Math.abs(CMB_DIST_MLY - this.C.length() / MLY_KM) * MLY_KM, 50 * MLY_KM));   // sınır yüzeyi
     }
     return Math.max(best, 0.05 * MLY_KM * smoothstep(19, 20, z) + 1);
   }
@@ -615,6 +637,7 @@ export class Act2Flight implements Scene {
   // ---------- kare ----------
 
   private dtLast = 0;
+  private btnLabels: HTMLElement[] = [];
   private gyroLast: THREE.Quaternion | null = null;
   private lastCard: string | null = null;
   private autoT = 0;
@@ -775,6 +798,11 @@ export class Act2Flight implements Scene {
       const cu = this.w.cosmic.c.material.uniforms, cam = this.layerCam("cosmic");
       cu.uFocal.value = innerHeight / 2 / Math.tan(cam.fov * Math.PI / 360);
       cu.uPixelRatio.value = pr;
+      const wu = this.w.cosmic.webMat.uniforms;                       // R5: temsili uzak ağ ve CMB
+      const outside = smoothstep(0.85, 1.3, this.C.length() / MLY_KM / CMB_DIST_MLY);   // dışarıdan bakınca küreyi kaplamasın
+      wu.uFocal.value = cu.uFocal.value; wu.uPixelRatio.value = pr; wu.uOpacity.value = cosmicWeight(z) * 0.75 * (1 - 0.9 * outside);
+      cu.uOpacity.value *= 1 - 0.9 * outside;
+      this.w.cosmic.cmb.update(this.C.length() / MLY_KM, 0.8 * smoothstep(22.3, 23.0, z));
       this.w.cosmic.c.home.material.uniforms.uPixelRatio.value = pr;
     }
     this.w.here.material.uniforms.uPixelRatio.value = pr;
@@ -800,7 +828,12 @@ export class Act2Flight implements Scene {
   private updateHud(z: number, alt: number, throttle: number) {
     const lang = getLang();
     const D = this.C.length();
-    this.ui.lightVal.textContent = fmtLightTime(D / C_KM_S, lang);
+    // 100 milyon ışık yılının ötesinde: genişleyen evrende gerçek ışık yolculuğu süresi (Planck 2018; R5)
+    const Dmly = D / MLY_KM;
+    this.ui.lightVal.textContent = Dmly > 100
+      ? fmtLightTime(Math.min(lightTravelGyr(Dmly), AGE_GYR) * 1e9 * 365.25 * 86400, lang)
+      : fmtLightTime(D / C_KM_S, lang);
+    show(this.ui.cosmoNote, Dmly > 100);
     const ly = D / LY_KM;
     this.ui.dist.textContent = `${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtLy(ly, lang)} ${t("act2.ly")}` : ""}`;
     this.ui.ruler.update(z);
@@ -812,9 +845,15 @@ export class Act2Flight implements Scene {
     show(this.ui.lblGalaxy, smoothstep(16.6, 17.4, z) > 0.5);
     show(this.ui.lblLocal, smoothstep(17.6, 18.4, z) > 0.5 && cosmicWeight(z) < 0.5);
     show(this.ui.lblCosmic, cosmicWeight(z) > 0.5);
-    show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5);
+    show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5 && z < 22.6);
+    show(this.ui.lblWeb, z > 22.2);
+    show(this.ui.lblCmb, z > 22.6);
     this.ui.hereLabel.textContent = z > 20 ? t("act2.homeLG") : t("act2.here");
     show(this.ui.hint, !this.moved && throttle === 0);
+    // Yükselişte hareket yukarı/aşağıdır (kamera Ankara'ya bakarken "İleri" ters hissettirmesin)
+    const [bBack, bFwd] = this.btnLabels;
+    const want = this.ascentAuto ? [t("act2.descend"), t("act2.ascendBtn")] : [t("act2.backward"), t("act2.forward")];
+    if (bBack && bBack.textContent !== want[0]) { bBack.textContent = want[0]; bFwd.textContent = want[1]; }
     // Durak kartı: bir durağın konumundaysan (uzaklığının %8'i içinde)
     let near: string | null = null;
     for (const st of this.w.stops) if (this.C.distanceTo(st.pos) < 0.08 * st.pos.length()) { near = st.key; break; }

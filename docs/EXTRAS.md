@@ -11,6 +11,9 @@ Kullanıcı geri bildirimi: galaksiye üstten bakılamıyor, kümelere gidilemiy
   Cassini Jüpiter haritası; diğer gezegenler temsili doku; Satürn halkaları gerçek yarıçaplarla.
 - **R2 — Samanyolu ve Yerel Grup:** üstten ve yandan bakılabilir, katmanlı disk + parçacıklar (temsili; konum ve yön gerçek).
 - **R3 — Kozmik ölçek:** 2MRS (~44.600 gerçek galaksi), H0 = 70 ile uzaklık, kümeler, kaçınma bölgesi; ~1,5 milyar ışık yılına kadar.
+- **R5 — Gözlemlenebilir evren:** Planck 2018 düz ΛCDM ile ışık yolculuğu süresi (100 milyon ışık yılının ötesinde),
+  2MRS'in ötesi temsili kozmik ağ, sınırda Planck CMB haritası (ESA and the Planck Collaboration, CC BY-SA 3.0 IGO) küre
+  olarak (yarıçap = son saçılma yüzeyinin eşhareketli uzaklığı, ~45 milyar ışık yılı). Sayılar milyar/sekstilyon/septilyon.
 - **R4 — Yıldızların gerçek boyutu ve boyut karşılaştırması** (kullanıcının ilham kaynağı "Star Size Comparison 2"):
   yıldızın yanına gidince gerçek yarıçaplı küre (Stefan–Boltzmann ile L ve T'den, bilinen devler için yayımlanmış ölçümler);
   Ay → Dünya → Jüpiter → Güneş → Sirius → Arcturus → Betelgeuse … yan yana karşılaştırma modu. Kaynaklı.

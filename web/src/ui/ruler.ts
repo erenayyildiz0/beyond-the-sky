@@ -20,7 +20,7 @@ export class Ruler {
       const f = this.frac(s.z);
       m.style.bottom = `${f * 100}%`;
       nudge = f - prev < 0.03 ? (nudge >= 0 ? -1 : 1) : 0;   // yakın duraklar: adları yukarı/aşağı kaydır
-      if (nudge) m.style.setProperty("--nudge", `${nudge * 7}px`);
+      if (nudge) m.style.setProperty("--nudge", `${nudge * 11}px`);
       prev = f;
       el("span", "ruler-tick", undefined, m);
       el("span", "ruler-name", t(`ruler.${s.key}`), m);

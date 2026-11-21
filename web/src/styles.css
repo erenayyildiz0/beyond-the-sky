@@ -180,7 +180,7 @@ button { font: inherit; color: inherit; }
 .outro-btns.on button { pointer-events: auto; }
 .next-btn-inline { border: 1px solid var(--accent); background: rgba(143, 184, 255, .12); border-radius: 999px; padding: 12px 30px; cursor: pointer; }
 .stop-card { position: absolute; left: 50%; bottom: calc(108px + var(--safe-b)); transform: translateX(-50%); width: min(560px, 88vw);
-  text-align: center; pointer-events: none; }
+  text-align: center; pointer-events: none; background: rgba(2, 4, 10, .55); border-radius: 12px; padding: 10px 16px; backdrop-filter: blur(4px); }
 .stop-title { font-size: var(--size-small); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
 .stop-text { font-size: calc(var(--size-body) * 1.15); line-height: 1.35; }
 .star-label { color: var(--text); opacity: .85; }

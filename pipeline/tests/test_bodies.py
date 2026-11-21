@@ -64,3 +64,13 @@ def test_milky_way_map_sun_on_arm():
     ring = [img[py, pxx] for a in np.linspace(0, 2 * np.pi, 360, endpoint=False)
             for pxx, py in [px(26.7 * np.cos(a), 26.7 * np.sin(a))]]
     assert sun > np.median(ring)
+
+
+def test_cmb_mollweide_orientation():
+    """Planck Mollweide: l = 0 merkezde, l = 90° solda (l sola doğru artar), kuzey kutbu üstte"""
+    from bts.cmb import mollweide_pixel
+    x, y = mollweide_pixel(np.array([0.0, 90.0, 270.0, 0.0]), np.array([0.0, 0.0, 0.0, 89.9]), 1920, 960)
+    assert abs(x[0] - 959.5) < 1 and abs(y[0] - 479.5) < 1
+    assert x[1] < x[0] < x[2]
+    assert y[3] < 10
+    assert (OUT / "cmb_2k.jpg").exists()

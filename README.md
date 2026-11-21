@@ -49,6 +49,8 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
   Aldebaran — Richichi & Roccatagliata 2005; Rigel — Moravveji ve ark. 2012; Betelgeuse — Joyce ve ark. 2020;
   Proxima — Boyajian ve ark. 2012; VY CMa — Wittkowski ve ark. 2012), diğerleri Stefan–Boltzmann ile hesaplanır
   (bolometrik düzeltme: Flower 1996 / Torres 2010; uzak devlerde yaklaşık).
+- Kozmoloji: Planck Collaboration 2020 (A&A 641, A6), düz ΛCDM, H0 = 67,66, Ωm = 0,3111. Kozmik mikrodalga arka planı:
+  ESA and the Planck Collaboration, CC BY-SA 3.0 IGO. 2MRS'in ötesindeki galaksi dağılımı temsilidir.
 - Galaksi görünümleri (Samanyolu, Andromeda, Üçgen, Macellan Bulutları, 2MRS) temsilidir; konum, yön ve boyut gerçektir.
   Samanyolu ölçüleri: Bland-Hawthorn & Gerhard 2016; çubuk açısı Wegg ve ark. 2015.
 - Merkür, Venüs, Mars, Satürn, Uranüs ve Neptün yüzey dokuları temsilidir (boyut, eksen ve konum gerçek); ekranda belirtilir.

@@ -26,7 +26,8 @@ from bts.visibility import count_visible, visible_mask
 
 SOURCES = ["HYG v4.1 (CC BY-SA 4.0)", "NASA SVS Deep Star Maps 2020", "NASA Black Marble 2016",
            "NASA Blue Marble Next Generation (Kasım 2004)", "NASA SVS 4720 / LRO (Ay)", "NASA/JPL/SSI Cassini PIA07782 (Jüpiter)",
-           "IAU WGCCRE 2015 (dönme eksenleri)", "2MRS (Huchra ve ark. 2012, ApJS 199, 26)"]
+           "IAU WGCCRE 2015 (dönme eksenleri)", "2MRS (Huchra ve ark. 2012, ApJS 199, 26)",
+           "ESA and the Planck Collaboration — Planck CMB (CC BY-SA 3.0 IGO)"]
 MIN_MISS_LY = 0.5
 
 
@@ -230,6 +231,8 @@ def main() -> None:
         from bts.galaxymap import build_galaxy_maps
         written += build_bodies(cfg, out)
         written += build_galaxy_maps(out)
+        from bts.cmb import build_cmb
+        written += build_cmb(cfg, out)
         sizes.update({p.name: p.stat().st_size for p in written})
     from bts.preview import build_previews
     build_previews(m, cfg.path(cfg.preview_dir), altaz8)

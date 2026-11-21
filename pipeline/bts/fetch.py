@@ -20,6 +20,10 @@ DOWNLOADS_R1 = {
     "BlackMarble_2016_C1.jpg": NASA_ASSETS + "esd/eo/images/imagerecords/144000/144898/BlackMarble_2016_C1.jpg",
     "lroc_color_poles_4k.tif": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_4k.tif",
     "PIA07782.jpg": NASA_ASSETS + "psd/photojournal/pia/pia07/pia07782/PIA07782.jpg",
+    # R5: Planck CMB (ESA and the Planck Collaboration, CC BY-SA 3.0 IGO)
+    "Planck_CMB.jpg": "https://media.esa.int/legacy/web/images/esa_multimedia/images/2013/03/planck_cmb/12583930-4-eng-GB/Planck_CMB.jpg",
+    # R3: 2MRS (Huchra ve ark. 2012)
+    "2mrs_v240.tgz": "http://tdc-www.harvard.edu/2mrs/2mrs_v240.tgz",
 }
 BLACK_MARBLE_PAGE = "https://science.nasa.gov/earth/earth-observatory/earth-at-night/maps"
 # Sayfadaki "2016 Color → Global → 13500x6750 (3km) JPEG" bağlantısı (21.11.2026'da çalıştı)
