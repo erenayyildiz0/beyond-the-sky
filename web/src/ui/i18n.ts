@@ -12,5 +12,6 @@ export const getLang = () => lang;
 
 export function t(key: Key, vars: Record<string, string | number> = {}) {
   const s: string = (lang === "en" ? en : tr)[key];
-  return s.replace(/\{(\w+)\}/g, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
+  // \p{L}: yer tutucu adlarında Türkçe harfler olabilir ({yıl_de})
+  return s.replace(/\{([\p{L}\d_]+)\}/gu, (_, k) => (k in vars ? String(vars[k]) : `{${k}}`));
 }

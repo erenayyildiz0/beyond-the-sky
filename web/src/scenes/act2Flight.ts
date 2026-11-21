@@ -4,6 +4,13 @@ import type { Action } from "../app/input";
 import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture } from "../app/assets";
 import { createStarBodyLayer } from "../render/starBody";
 import { kelvinToRgb, starRadius } from "../science/stars";
+import { createConstellationLines } from "../render/constellations";
+import earthVert from "../render/shaders/earth.vert.glsl?raw";
+import bubbleFrag from "../render/shaders/bubble.frag.glsl?raw";
+import { StopCard } from "../ui/stopCard";
+import { lightLeft, trDurationLocative, trLocative } from "../science/years";
+import { PROXIMA_LY, SUN_GALACTOCENTRIC_LY, VOYAGER1_KM_S, VOYAGER1_LAUNCH_UTC, VOYAGER1_LIGHT_DAY_UTC } from "../science/constants";
+import { fmtInt } from "../ui/format";
 import { createCosmicScene } from "../render/cosmic";
 import { hFovDeg } from "../app/look";
 import { createEarthLayer } from "../render/earth";
@@ -54,6 +61,8 @@ interface FlightWorld {
   here: ReturnType<typeof createMarkers>;
   cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array } | null;
   starBody: ReturnType<typeof createStarBodyLayer>;
+  lines: ReturnType<typeof createConstellationLines>;
+  bubbleMat: THREE.ShaderMaterial;
   starOrigin: THREE.Vector3;
   detail: { ci: (number | null)[] } | null;
 }
@@ -73,6 +82,16 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   stars.frustumCulled = false;
   stars.renderOrder = 1;
   const deep = createDeepScene(sky, milkyWay, stars);
+  const lines = createConstellationLines(sky, sw.starGeo.getAttribute("position").array as Float32Array);
+  deep.scene.add(lines.group);
+  // "Gördüğün her şey" küresi: yarıçap = karanlıkta görülen yıldızların ortanca uzaklığı (sky.json meta.stats)
+  const bubbleMat = new THREE.ShaderMaterial({ vertexShader: earthVert, fragmentShader: bubbleFrag, transparent: true, depthWrite: false, depthTest: false,
+    blending: THREE.AdditiveBlending, premultipliedAlpha: true, side: THREE.DoubleSide,
+    uniforms: { uColor: { value: new THREE.Color("#8FB8FF") }, uOpacity: { value: 0 } } });
+  const bubble = new THREE.Mesh(new THREE.SphereGeometry(sky.meta.stats.dark_dist_ly_p50, 96, 48), bubbleMat);
+  bubble.renderOrder = 1;
+  bubble.frustumCulled = false;
+  deep.scene.add(bubble);
   const solar = createSolarLayer(sky);
   const earth = createEarthLayer(sky);
   const state = { altKm: 1, nearStarLy: 4, starW: 0 };
@@ -204,7 +223,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   if (gs) gs.look = mwCenter.clone().multiplyScalar(0.5 * LY_KM).sub(gs.pos).normalize();
   stops.sort((a, b) => a.z - b.z);
 
-  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null, starBody, starOrigin, detail: null };
+  world = { layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat };
   const w = world;
   loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
   loadCosmic().then(({ data, names }) => {
@@ -253,6 +272,7 @@ export class Act2Flight implements Scene {
   private homeHold: number | null = null;
   private freeHintS = 0;
   private ui!: {
+    stopCard: StopCard; starLabels: { i: number; e: HTMLElement }[];
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
     lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement; lblCosmic: HTMLElement; lblZoa: HTMLElement;
@@ -329,14 +349,15 @@ export class Act2Flight implements Scene {
     mk(t("act2.backward"), -1);
     mk(t("act2.forward"), 1);
     const extra = el("div", "fly-extra on", undefined, root);
-    const home = el("button", "fly-small", t("act2.lookHome"), extra);
+    const left = el("div", "fly-left", undefined, extra);
+    const home = el("button", "fly-small", t("act2.lookHome"), left);
     home.addEventListener("pointerdown", () => { this.homeHold = performance.now(); });
     home.addEventListener("pointerup", () => {
       const long = this.homeHold != null && performance.now() - this.homeHold > 600;
       this.homeHold = null;
       if (long) this.goStop(0); else this.lookAt(new THREE.Vector3(), 1.2);        // uzun bas: eve uç
     });
-    const sizes = el("button", "fly-small", t("compare.open"), extra);
+    const sizes = el("button", "fly-small", t("compare.open"), left);
     sizes.addEventListener("click", () => {
       this.ctx.shared.flight = { C: this.C.toArray(), f: this.ori.f.toArray(), u: this.ori.u.toArray() };
       this.ctx.director.go("compare");
@@ -357,9 +378,11 @@ export class Act2Flight implements Scene {
     const bodyLabels = this.w.bodies.filter(b => b.kind !== "earth")
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
+    const stopCard = new StopCard(root);
+    const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root) }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
-    this.ui = { root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
+    this.ui = { stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, bodyLabels, card, extra };
   }
 
   private radiusCache = new Map<number, ReturnType<typeof starRadius>>();
@@ -386,6 +409,40 @@ export class Act2Flight implements Scene {
       : t("card.radiusComputed", { r: fmtDec(info.R, info.R < 10 ? 1 : 0, lang), t: fmtDec(Math.round(info.T / 10) * 10, 0, lang) })) : undefined;
     return { key: `star:${i}`, name, posKm: new THREE.Vector3(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).multiplyScalar(LY_KM),
       endKm: info ? Math.max(8 * info.R * SUN_RADIUS_KM, 2e6) : 0.05 * LY_KM, kind: "star", dly: sky.starDly[i], note };
+  }
+
+  /** §8 durak metni (sayılar sky.json ve sabitlerden) */
+  private stopText(key: string) {
+    const sky = this.ctx.assets.sky, m = sky.meta, lang = getLang();
+    const lt = (km: number) => fmtLightTime(km / C_KM_S, lang);
+    const nep = sky.bodies.find(b => b.key === "neptune")!;
+    const Y = 365.25 * 86400e3;
+    switch (key) {
+      case "moon": return t("stop.moon", { d: fmtDec(m.moon.light_time_s, 2, lang) });
+      case "sun": { const tt = lt(m.sun.dist_au * AU_KM); return t("stop.sun", { t: tt, t_de: trDurationLocative(tt) }); }
+      case "neptune": { const tt = lt(nep.dist_au * AU_KM); return t("stop.neptune", { t: tt, t_de: trDurationLocative(tt) }); }
+      case "voyager": return t("stop.voyager", { years: Math.floor((Date.parse(VOYAGER1_LIGHT_DAY_UTC) - Date.parse(VOYAGER1_LAUNCH_UTC)) / Y) });
+      case "nearest": return t("stop.nearest", { n: fmtInt(Math.round(PROXIMA_LY * LY_KM / (VOYAGER1_KM_S * 365.25 * 86400) / 1000) * 1000, lang) });
+      case "achird": {
+        const i = sky.stars.data.findIndex(r => r[7] === 3821);
+        const y = lightLeft(sky.starDly[i]!, m.obs_year_frac).year;
+        return t("stop.achird", { name: sky.starName(i) ?? "Achird", yıl_de: trLocative(y), year: y });
+      }
+      case "bubble": return t("stop.bubble", { r: fmtInt(m.stats.dark_dist_ly_p50, lang) });
+      case "m31": {
+        const g = sky.galaxies.find(x => x.key === "m31")!;
+        const w = g.alt > 80 ? "zenith" : g.alt > 30 ? "high" : "low";
+        return t("stop.m31", { where: t(`stop.m31.where.${w}` as "stop.m31.where.high") });
+      }
+      case "galaxyTop": return t("stop.galaxyTop", { d: fmtInt(SUN_GALACTOCENTRIC_LY, lang) });
+      case "localGroup": return t("stop.localGroup", { d: fmtInt(sky.galaxies.find(x => x.key === "m31")!.dist_ly, lang) });
+      case "virgo": case "coma": {
+        const c = sky.cosmic?.clusters.find(x => x.key === key);
+        return t(`stop.${key}` as "stop.virgo", { d: c ? fmtDec(c.dist_mly, 0, lang) : "?" });
+      }
+      case "cosmicWeb": return t("stop.cosmicWeb", { n: fmtInt(sky.cosmic?.count ?? 0, lang) });
+      default: return t(`stop.${key}` as "stop.earth");
+    }
   }
 
   private layerCam(name: ScaleLayer["name"]) { return this.w.layers.find(L => L.name === name)!.camera; }
@@ -649,6 +706,13 @@ export class Act2Flight implements Scene {
     show(this.ui.lblZoa, cosmicWeight(z) > 0.5 && z > 21.5);
     this.ui.hereLabel.textContent = z > 20 ? t("act2.homeLG") : t("act2.here");
     show(this.ui.hint, !this.moved && throttle === 0);
+    // Durak kartı: bir durağın konumundaysan (uzaklığının %8'i içinde)
+    let near: string | null = null;
+    for (const st of this.w.stops) if (this.C.distanceTo(st.pos) < 0.08 * st.pos.length()) { near = st.key; break; }
+    this.ui.stopCard.set(near, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
+    // Takımyıldız çizgileri (§6.5.5)
+    this.w.bubbleMat.uniforms.uOpacity.value = smoothstep(15.7, 15.9, z) * (1 - smoothstep(16.6, 16.8, z));   // z ∈ [15,9; 16,6]
+    this.w.lines.update(smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);
     show(this.ui.hint2, !this.ascentAuto && this.moved && this.freeHintS < 6);
     Object.assign(this.ctx.debug, {
       "konum": `${fmtKm(D, lang)} · yükseklik ${fmtKm(Math.max(alt, 0), lang)}`,
@@ -785,6 +849,7 @@ export class Act2Flight implements Scene {
 
   private placeLabels() {
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
+    this.placeStarLabels(z);
     { // "Buradasın": Güneş (orijin)
       const e = this.ui.hereLabel;
       _v.set(0, 0, 0).project(this.layerCam("deep"));
@@ -811,6 +876,40 @@ export class Act2Flight implements Scene {
       show(e, vis);
       if (vis) { placed.push({ x, y }); e.style.transform = `translate(${x + 10}px, ${y - 10}px)`; }
     }
+  }
+
+  /** Yıldız etiketleri (SPEC §6.5.6): z ∈ [12,3; 16,5], önde, ekranda, m_app < uMLim − 0,5; en fazla 4 (merkeze en yakın) */
+  private placeStarLabels(z: number) {
+    const sky = this.ctx.assets.sky, P = this.w.space.starPosLy, cam = this.layerCam("deep"), lang = getLang();
+    const mLim = exposureLimit(z), cands: { e: HTMLElement; x: number; y: number; c: number; text: string }[] = [];
+    const cx = this.C.x / LY_KM, cy = this.C.y / LY_KM, cz = this.C.z / LY_KM;
+    for (const L of this.ui.starLabels) {
+      show(L.e, false);
+      if (z < 12.3 || z > 16.5) continue;
+      const i = L.i, dly = sky.starDly[i];
+      if (dly == null) continue;
+      const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2];
+      if (apparentMag(sky.starMag[i], dly, Math.hypot(px - cx, py - cy, pz - cz)) > mLim - 0.5) continue;
+      _v.set(px, py, pz).project(cam);
+      if (_v.z >= 1 || _v.z <= -1 || Math.abs(_v.x) > 0.95 || Math.abs(_v.y) > 0.95) continue;
+      const ll = lightLeft(dly, sky.meta.obs_year_frac);
+      const dist = fmtDec(dly, dly < 100 ? 1 : 0, lang);
+      const name = sky.starName(i) ?? "";
+      const text = ll.bc ? t("act2.label.bc", { name, dist, bc: ll.bc })
+        : ll.approx ? t("act2.label.approx", { name, dist, yıl_de: trLocative(ll.year), year: ll.year })
+        : t("act2.label.star", { name, dist, yıl_de: trLocative(ll.year), year: ll.year });
+      cands.push({ e: L.e, x: (_v.x + 1) / 2 * innerWidth, y: (1 - _v.y) / 2 * innerHeight, c: Math.hypot(_v.x, _v.y), text });
+    }
+    const placed: { x: number; y: number }[] = [];
+    cands.sort((a, b) => a.c - b.c).filter(c => {
+      if (c.y > innerHeight - 220) return false;                                                    // kart ve düğme bölgesi
+      if (placed.some(p => Math.abs(p.x - c.x) < 200 && Math.abs(p.y - c.y) < 18)) return false;   // çakışanları atla
+      placed.push(c); return true;
+    }).slice(0, 4).forEach(c => {
+      c.e.textContent = c.text;
+      c.e.style.transform = `translate(${c.x + 10}px, ${c.y - 10}px)`;
+      show(c.e, true);
+    });
   }
 
   onResize(w: number, h: number) {
