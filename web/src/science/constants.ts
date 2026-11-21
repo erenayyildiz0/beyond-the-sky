@@ -28,3 +28,8 @@ export const SGRA_DIST_PC = 8277;                // aynı çalışma (R0)
 export const SGRA_RA_DEG = (17 + 45 / 60 + 40.0409 / 3600) * 15;   // Reid & Brunthaler 2004, ApJ 616, 872 (ICRS)
 export const SGRA_DEC_DEG = -(29 + 0 / 60 + 28.118 / 3600);
 export const PC_LY = 3.261563777;                // 1 parsek (IAU 2015 B2) ışık yılı cinsinden
+
+// GRAVITY Collaboration 2020, A&A 636, L5
+export const S2_ORBIT = {
+  aArcsec: 0.125058, e: 0.884649, iDeg: 134.567, OmegaDeg: 228.171, omegaDeg: 66.263, periodYr: 16.0455, tPeriYr: 2018.37900,
+};
