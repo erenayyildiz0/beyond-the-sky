@@ -30,6 +30,10 @@ export interface SkyJson {
   voyager1: { enu_dir: number[]; dist_au: number; source: string };
   galaxies: Galaxy[];
   birth: { first_year: number; rows: [number, number, number][] };
+  cosmic?: {
+    count: number; h0: number; max_mly: number;
+    clusters: { key: string; name_tr: string; name_en: string; enu_mly: number[]; dist_mly: number }[];
+  };
   realism: {
     ankara_patch: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
     poles_enu: Record<string, number[]>;
@@ -192,4 +196,15 @@ export function loadEarthTexture(renderer: THREE.WebGLRenderer, variant: "8k" | 
       return tex;
     });
   return earthTex;
+}
+
+let cosmicP: Promise<{ data: Float32Array; names: Map<number, string> }> | null = null;
+/** 2MRS galaksileri (R3): cosmic.bin (Float32 × 6: x, y, z [milyon ışık yılı, ENU], r [bin ışık yılı], tür, eksen oranı) */
+export function loadCosmic() {
+  if (cosmicP) return cosmicP;
+  cosmicP = Promise.all([
+    fetch(`${BASE}data/cosmic.bin`).then(r => { if (!r.ok) throw new Error(`cosmic.bin: ${r.status}`); return r.arrayBuffer(); }),
+    fetch(`${BASE}data/cosmic_names.json`).then(r => r.json() as Promise<{ i: number; name: string }[]>),
+  ]).then(([buf, names]) => ({ data: new Float32Array(buf), names: new Map(names.map(x => [x.i, x.name])) }));
+  return cosmicP;
 }

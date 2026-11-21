@@ -16,7 +16,7 @@ export interface Space {
 
 export const STAR_MIN_LY = 0.02;                          // bir yıldızın bundan yakınına girilmez (§6.12)
 export const SPEED_MIN_KM_S = 0.05;
-export const SPEED_MAX_KM_S = 5e5 * LY_KM;                // §6.12 üst sınırı (5e5 ışık yılı/sn)
+export const SPEED_MAX_KM_S = 1e9 * LY_KM;                // kozmik ölçek (R3) için §6.12'deki 5e5 ışık yılı/sn'den yükseltildi; hız yine yerel ölçekle sınırlı
 
 export const altitudeKm = (C: THREE.Vector3, s: Space) => C.distanceTo(s.earthCenter) - EARTH_RADIUS_KM;
 

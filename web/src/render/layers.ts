@@ -8,7 +8,7 @@ import { createSkyDome } from "./skyDome";
  * derinlik tamponu bozulur. Her katman kendi biriminde çizilir; ana kamera konumu JS'te float64 km.
  */
 export interface ScaleLayer {
-  name: "deep" | "solar" | "earth";
+  name: "cosmic" | "deep" | "solar" | "earth";
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   unitKm: number;
@@ -20,7 +20,7 @@ export interface ScaleLayer {
 
 export function renderLayers(r: THREE.WebGLRenderer, layers: ScaleLayer[], camPosKm: THREE.Vector3, q: THREE.Quaternion, z: number) {
   r.clear();
-  for (const L of layers) {                                // sıra: deep → solar → earth (uzaktan yakına)
+  for (const L of layers) {                                // sıra: cosmic → deep → solar → earth (uzaktan yakına)
     const w = L.weight(z);
     if (w <= 0.001) continue;
     L.applyWeight(w);
