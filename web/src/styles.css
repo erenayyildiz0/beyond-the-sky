@@ -48,7 +48,7 @@ html, body { margin: 0; height: 100dvh; background: var(--bg); overflow: hidden;
 button { font: inherit; color: inherit; }
 
 /* Görünür/gizli geçişleri */
-.intro, .act1 > *, .placeholder, .loading-label { opacity: 0; transition: opacity var(--fade) var(--ease); }
+.intro, .act1 > *, .act2 > *, .layer-label, .body-label, .placeholder, .loading-label { opacity: 0; transition: opacity var(--fade) var(--ease); }
 .on, .act1 > .on, .act1 > .place, .act1 > .badge, .act1 > .names { opacity: 1; }
 .act1 > :not(.on):not(.place):not(.badge):not(.names),
 .act1 > :not(.on):not(.place):not(.badge):not(.names) * { pointer-events: none !important; }
@@ -104,6 +104,44 @@ button { font: inherit; color: inherit; }
 .names { position: absolute; inset: 0; overflow: hidden; }
 .name { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
 .name.planet { color: #FFE7B0; }
+
+/* PERDE 2 */
+.act2 { position: absolute; inset: 0; }
+.act2 > :not(.on), .act2 > :not(.on) * { pointer-events: none !important; }
+.act2 > .layer-labels { pointer-events: none; }
+.light-counter { position: absolute; left: 20px; top: calc(16px + var(--safe-t)); }
+.light-label { font-size: var(--size-small); color: var(--muted); letter-spacing: .04em; }
+.light-value { font-size: clamp(20px, 3.2vw, 34px); font-weight: 600; margin-top: 2px; }
+.ruler { position: absolute; right: 14px; top: 15%; height: 70%; width: 150px; }
+.ruler-line { position: absolute; right: 8px; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.22); }
+.ruler-mark { position: absolute; right: 0; transform: translateY(50%); display: flex; align-items: center; gap: 8px;
+  flex-direction: row-reverse; background: none; border: 0; padding: 2px 0; cursor: pointer; color: var(--muted); }
+.ruler-tick { width: 17px; height: 1px; background: rgba(255,255,255,.45); }
+.ruler-name { font-size: 11px; white-space: nowrap; opacity: .75; }
+.ruler-mark.near .ruler-name { color: var(--text); opacity: 1; }
+.ruler-mark:hover .ruler-name { opacity: 1; }
+.ruler-cursor { position: absolute; right: 3px; width: 11px; height: 11px; margin-bottom: -5.5px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.fly-controls { position: absolute; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translateX(-50%); display: flex; gap: 14px; }
+.fly-btn { min-width: 96px; height: 64px; border-radius: 32px; border: 1px solid var(--badge-border); background: var(--badge-bg);
+  cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding: 0 22px; }
+.fly-btn.down { border-color: var(--accent); background: rgba(143, 184, 255, .14); }
+.fly-hint { position: absolute; left: 0; right: 0; bottom: calc(100px + var(--safe-b)); text-align: center; font-size: var(--size-small);
+  color: var(--muted); }
+.fly-hint.on { animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+.layer-labels { position: absolute; left: 20px; bottom: calc(100px + var(--safe-b)); display: flex; flex-direction: column; gap: 4px; max-width: 60vw; }
+.layer-label { font-size: var(--size-small); color: var(--muted); }
+.layer-label.exposure { color: #FFE7B0; }
+.body-label { position: absolute; left: 0; top: 0; font-size: var(--size-small); color: var(--muted); white-space: nowrap; }
+@media (orientation: landscape) and (min-width: 700px) {
+  .fly-controls { left: auto; right: 180px; transform: none; }
+  .layer-labels { bottom: calc(24px + var(--safe-b)); }
+}
+@media (max-width: 640px) {
+  .ruler { width: 110px; }
+  .ruler-name { font-size: 10px; }
+}
 
 .placeholder { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); padding: 24px; text-align: center; }
 .fallback { position: absolute; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; }

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { bindHoldButton, HoldControl } from "../app/input";
+import { loadEarthTexture } from "../app/assets";
 import { frameSkyCamera, SkyLook } from "../app/look";
 import { T } from "../app/timeline";
 import { createSkyDome, SKY_COLORS } from "../render/skyDome";
@@ -74,6 +75,10 @@ export class Act1Lights implements Scene {
     this.look.set(alt0, view.az_deg);
     this.lastW = innerWidth; this.lastH = innerHeight;
     this.w.skyline.mesh.visible = true;
+    this.w.skyline.material.uniforms.uOpacity.value = 1;
+    this.w.starMat.uniforms.uTwinkle.value = 1;
+    // Dünya dokusu Perde 2 için arka planda (§6.10)
+    setTimeout(() => loadEarthTexture(ctx.renderer, ctx.assets.variant.earth).catch(e => console.warn(e)), 1500);
     ctx.director.setState("A1_CITY");
     this.buildUi();
   }
@@ -120,7 +125,8 @@ export class Act1Lights implements Scene {
 
   private goUp() {
     if (this.lockedAt == null) return;
-    this.ctx.director.go("act2");
+    this.ctx.shared.act1Look = { alt: this.look.alt, az: this.look.az };
+    this.ctx.director.go("act2", true);                    // kalkış kendi karartmasını yapar (§6.5.4)
   }
 
   private get controlsOn() { return this.t >= T.act1.introText; }

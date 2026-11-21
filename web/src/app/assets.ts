@@ -143,3 +143,22 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: 
   onProgress(1);
   return { sky, milkyWay, variant };
 }
+
+let earthTex: Promise<THREE.Texture> | null = null;
+
+/** Dünya gece dokusu (SPEC §5.9): Perde 1 başlayınca arka planda yüklenir; aynı söz tekrar döner. */
+export function loadEarthTexture(renderer: THREE.WebGLRenderer, variant: "8k" | "4k"): Promise<THREE.Texture> {
+  if (earthTex) return earthTex;
+  earthTex = fetch(`${BASE}data/earth_night_${variant}.jpg`)
+    .then(r => { if (!r.ok) throw new Error(`earth_night_${variant}.jpg: ${r.status}`); return r.blob(); })
+    .then(b => createImageBitmap(b, { imageOrientation: "flipY" }))
+    .then(bmp => {
+      const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+      tex.flipY = false;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+      tex.needsUpdate = true;
+      return tex;
+    });
+  return earthTex;
+}

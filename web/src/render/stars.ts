@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import vertSky from "./shaders/starsSky.vert.glsl?raw";
+import vertFlight from "./shaders/starsFlight.vert.glsl?raw";
 import frag from "./shaders/stars.frag.glsl?raw";
 import { dirFromAltAz } from "../science/coords";
 import { mulberry32 } from "./rng";
@@ -78,6 +79,31 @@ export function createSkyStarMaterial(sky: Sky, pixelRatio: number) {
       uTime: { value: 0 },
       uTwinkle: { value: STAR_DEFAULTS.uTwinkle },
       uIntensity: { value: STAR_DEFAULTS.uIntensity },
+    },
+  });
+}
+
+/** Uçuş malzemesi (Perde 2, Keşif): aynı geometri, gerçek 3D konum, §3.8 parlaklığı. */
+export function createFlightStarMaterial(sky: Sky, pixelRatio: number) {
+  return new THREE.ShaderMaterial({
+    vertexShader: vertFlight,
+    fragmentShader: frag,
+    transparent: true,
+    depthWrite: false,
+    depthTest: false,
+    blending: THREE.AdditiveBlending,
+    premultipliedAlpha: true,
+    uniforms: {
+      uMLim: { value: 6.62 },
+      uSoft: { value: STAR_DEFAULTS.uSoft },
+      uBaseSize: { value: STAR_DEFAULTS.uBaseSize },
+      uMaxSize: { value: STAR_DEFAULTS.uMaxSize },
+      uFlyByMax: { value: 28 },
+      uRefMag: { value: STAR_DEFAULTS.uRefMag },
+      uPixelRatio: { value: pixelRatio },
+      uIntensity: { value: STAR_DEFAULTS.uIntensity },
+      uNoDistShell: { value: sky.meta.stats.nodist_shell_ly },
+      uFade: { value: 1 },
     },
   });
 }

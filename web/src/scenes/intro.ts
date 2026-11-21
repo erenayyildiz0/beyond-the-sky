@@ -43,7 +43,11 @@ export class Intro implements Scene {
 
   private start() {
     // M6: AudioContext, jiroskop izni, Wake Lock ve tam ekran bu dokunuşun içinde istenecek.
-    this.ctx.director.go("act1");
+    const z = this.ctx.params.z;
+    if (z != null) {                                     // ?z=15.3 → Perde 2 doğrudan bu ölçekten (§2.1)
+      this.ctx.shared.startZ = z;
+      this.ctx.director.go("act2");
+    } else this.ctx.director.go("act1");
   }
 
   onAction(a: Action) { if (a === "next") this.start(); }

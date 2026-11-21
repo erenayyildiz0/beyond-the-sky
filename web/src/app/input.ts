@@ -27,15 +27,18 @@ export class Input {
   onAction: (a: Action) => void = () => {};
   onTap: (x: number, y: number) => void = () => {};
   dragDx = 0; dragDy = 0;              // son okumadan beri biriken sürükleme (px)
+  zoomDz = 0;                          // son okumadan beri pinch + tekerlek (z birimi; + = ileri, evden uzağa)
   dragging = false;
   keys = new Set<string>();
-  private down: { id: number; x: number; y: number; t: number; moved: number } | null = null;
+  private pointers = new Map<number, { x: number; y: number; t: number; moved: number }>();
+  private pinchDist = 0;
 
   constructor(private canvas: HTMLElement) {
     canvas.addEventListener("pointerdown", this.pd);
     canvas.addEventListener("pointermove", this.pm);
     canvas.addEventListener("pointerup", this.pu);
     canvas.addEventListener("pointercancel", this.pu);
+    canvas.addEventListener("wheel", this.wh, { passive: false });
     window.addEventListener("keydown", this.kd);
     window.addEventListener("keyup", this.ku);
     window.addEventListener("blur", () => this.keys.clear());
@@ -48,26 +51,52 @@ export class Input {
     return d;
   }
 
+  consumeZoom() {
+    const z = this.zoomDz;
+    this.zoomDz = 0;
+    return z;
+  }
+
+  private dist() {
+    const [a, b] = [...this.pointers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
   private pd = (e: PointerEvent) => {
-    if (this.down) return;
+    if (this.pointers.size >= 2) return;
     this.canvas.setPointerCapture(e.pointerId);
-    this.down = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+    this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 });
     this.dragging = true;
+    if (this.pointers.size === 2) this.pinchDist = this.dist();
   };
   private pm = (e: PointerEvent) => {
-    const d = this.down;
-    if (!d || d.id !== e.pointerId) return;
+    const d = this.pointers.get(e.pointerId);
+    if (!d) return;
     const dx = e.clientX - d.x, dy = e.clientY - d.y;
     d.moved += Math.hypot(dx, dy);
     d.x = e.clientX; d.y = e.clientY;
+    if (this.pointers.size === 2) {
+      // İki parmak (SPEC §6.5.3): içe sıkıştırmak = ileri (harita uygulamalarındaki gibi uzaklaşır)
+      const now = this.dist();
+      if (this.pinchDist > 0 && now > 0) this.zoomDz += 2 * Math.log10(this.pinchDist / now);
+      this.pinchDist = now;
+      return;
+    }
     this.dragDx += dx; this.dragDy += dy;
   };
   private pu = (e: PointerEvent) => {
-    const d = this.down;
-    if (!d || d.id !== e.pointerId) return;
-    this.down = null;
-    this.dragging = false;
-    if (e.type === "pointerup" && d.moved < TAP_PX && performance.now() - d.t < TAP_MS) this.onTap(e.clientX, e.clientY);
+    const d = this.pointers.get(e.pointerId);
+    if (!d) return;
+    const wasPinch = this.pointers.size === 2;
+    this.pointers.delete(e.pointerId);
+    for (const p of this.pointers.values()) p.moved = Infinity;     // pinch'ten kalan parmak dokunuş sayılmaz
+    this.dragging = this.pointers.size > 0;
+    if (!wasPinch && e.type === "pointerup" && d.moved < TAP_PX && performance.now() - d.t < TAP_MS) this.onTap(e.clientX, e.clientY);
+  };
+  private wh = (e: WheelEvent) => {
+    e.preventDefault();
+    const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1;
+    this.zoomDz += e.deltaY * k * 0.0015;
   };
 
   private kd = (e: KeyboardEvent) => {

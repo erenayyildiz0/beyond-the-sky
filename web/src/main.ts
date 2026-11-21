@@ -47,7 +47,7 @@ async function main() {
   };
   const input = new Input(canvas);
   const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight() });
-  const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {} };
+  const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {} };
   director.ctx = ctx;
   const panel = new SciencePanel(ctx, document.body);
   window.addEventListener("bts:toggleDebug", () => panel.toggle());

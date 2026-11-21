@@ -33,6 +33,8 @@ export interface AppContext {
   director: Director;
   /** Bilim paneline sahnenin canlı göstergeleri */
   debug: Record<string, string | number>;
+  /** Sahneler arası aktarılan durum */
+  shared: { act1Look?: { alt: number; az: number }; startZ?: number };
 }
 
 export type SceneId = "intro" | "act1" | "act2";
@@ -63,10 +65,11 @@ export class Director {
     this.busy = false;
   }
 
-  private fadeTo(o: number) {
-    this.fade.style.transition = `opacity ${T.fadeMs}ms ease`;
+  /** #fade karartması; sahneler kendi geçişleri için de kullanır (ör. kalkış). */
+  fadeTo(o: number, ms: number = T.fadeMs) {
+    this.fade.style.transition = `opacity ${ms}ms ease`;
     this.fade.style.opacity = String(o);
-    return new Promise<void>(r => setTimeout(r, T.fadeMs));
+    return new Promise<void>(r => setTimeout(r, ms));
   }
 
   update(dt: number, now: number) { this.scene?.update(dt, now); }
