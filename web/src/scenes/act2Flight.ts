@@ -481,7 +481,7 @@ export class Act2Flight implements Scene {
     const lblZoa = el("div", "layer-label", t("label.zoa"), labels);
     const lblWeb = el("div", "layer-label", t("label.web"), labels);
     const lblCmb = el("div", "layer-label", t("label.cmb"), labels);
-    const order = ["cl:virgo", "cl:coma", "cl:fornax", "cl:perseus", "cl:centaurus", "cl:hydra", "cl:norma", "cl:shapley", "mw", "m31", "m33", "lmc", "smc", "moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
+    const order = ["cl:virgo", "cl:coma", "cl:fornax", "cl:perseus", "cl:centaurus", "cl:hydra", "cl:norma", "cl:shapley", "mw", "sgra", "s2", "m31", "m33", "lmc", "smc", "moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
     const bodyLabels = this.w.bodies.filter(b => b.kind !== "earth")
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
@@ -544,6 +544,7 @@ export class Act2Flight implements Scene {
   private openBirth() {
     this.phase = "birth";
     this.ctx.director.setState("A3_BIRTH");
+    this.ui.card.hide();
     show(this.ui.toBirth, false); show(this.ui.birth, true);
     (this.ui.birth.querySelector("input") as HTMLInputElement).focus();
   }
@@ -579,9 +580,10 @@ export class Act2Flight implements Scene {
       const P = this.w.space.starPosLy, sky = this.ctx.assets.sky;
       show(this.ui.yourStar, true);
       _v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).project(this.layerCam("deep"));
-      const on = _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95 && z < 16.5;
+      const inFront = _v.z < 1 && _v.z > -1;
+      const on = inFront && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95 && z < 16.5;
       show(this.ui.ring, on);
-      if (on) this.ui.ring.style.transform = `translate(${(_v.x + 1) / 2 * innerWidth}px, ${(1 - _v.y) / 2 * innerHeight}px) translate(-50%, -50%)`;
+      if (inFront) this.ui.ring.style.transform = `translate(${(_v.x + 1) / 2 * innerWidth}px, ${(1 - _v.y) / 2 * innerHeight}px) translate(-50%, -50%)`;
       // Işık çizgisi: z, log10(dly · LY_KM) + 0,3'ün altına inince akar (§6.6)
       const zs = Math.log10(sky.starDly[i]! * LY_KM);
       if (this.ray) (this.ray.material as THREE.LineBasicMaterial).opacity = 0.7 * (1 - smoothstep(zs - 0.2, zs + 0.3, z));
@@ -682,6 +684,7 @@ export class Act2Flight implements Scene {
   // ---------- hareket planları ----------
 
   private lookAt(pointKm: THREE.Vector3, dur: number) {
+    this.ui.card.hide();
     const f = pointKm.clone().sub(this.C).normalize();
     const q1 = this.quatFor(f);
     this.plan = { t: 0, turnS: dur, dur: 0, at: null, q0: this.q.clone(), q1 };
@@ -780,7 +783,7 @@ export class Act2Flight implements Scene {
     this.wheelT = Math.max(-1.5, Math.min(1.5, this.wheelT * Math.exp(-dt / 0.35) + dz * 4));
     if (Math.abs(this.wheelT) < 0.02) this.wheelT = 0;
     const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle + this.wheelT));
-    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; }
+    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; this.ui.card.hide(); }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
     const sInfo = this.nearStar.i >= 0 ? this.starInfo(this.nearStar.i) : null;
@@ -962,9 +965,13 @@ export class Act2Flight implements Scene {
     const [bBack, bFwd] = this.btnLabels;
     const want = this.ascentAuto ? [t("act2.descend"), t("act2.ascendBtn")] : [t("act2.backward"), t("act2.forward")];
     if (bBack && bBack.textContent !== want[0]) { bBack.textContent = want[0]; bFwd.textContent = want[1]; }
-    // Durak kartı: bir durağın konumundaysan (uzaklığının %8'i içinde)
-    let near: string | null = null;
-    for (const st of this.w.stops) if (this.C.distanceTo(st.pos) < 0.08 * st.pos.length()) { near = st.key; break; }
+    // Durak kartı: en yakın durağın konumundaysan (Sgr A* ve S2 için yerel Rs eşiği, diğerleri uzaklığın %8'i)
+    let near: string | null = null, bestStop = Infinity;
+    for (const st of this.w.stops) {
+      const d = this.C.distanceTo(st.pos);
+      const r = st.key === "sgra" ? 500 * this.w.sgra.rsKm : st.key === "s2" ? 2e5 * this.w.sgra.rsKm : 0.08 * st.pos.length();
+      if (d < r && d < bestStop) { bestStop = d; near = st.key; }
+    }
     this.ui.stopCard.set(this.phase === "free" ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
     this.updateBirthUi(z, near, this.dtLast);
     if (near && near !== this.lastCard && this.phase === "free") this.ctx.audio?.chime();   // durakta zil
@@ -991,7 +998,7 @@ export class Act2Flight implements Scene {
   // ---------- dokunma ----------
 
   private pick(x: number, y: number) {
-    if (this.plan) { this.plan = null; return; }                 // dokunuş uçuşu durdurur
+    if (this.plan) { this.plan = null; this.ui.card.hide(); return; }   // dokunuş uçuşu durdurur
     const W = innerWidth, H = innerHeight;
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
     const scr = (p: THREE.Vector3, cam: THREE.Camera) => {
@@ -1110,17 +1117,24 @@ export class Act2Flight implements Scene {
   }
 
   private placeLabels() {
+    if (this.phase === "return") {
+      for (const L of this.ui.starLabels) show(L.e, false);
+      for (const B of this.ui.bodyLabels) show(B.e, false);
+      show(this.ui.hereLabel, false);
+      return;
+    }
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
     this.placeStarLabels(z);
     const placed: { x: number; y: number }[] = [];           // çakışan etiketleri gizle (sıra: önem; "Buradasın" önce)
     { // "Buradasın": Güneş (orijin)
       const e = this.ui.hereLabel;
       _v.set(0, 0, 0).project(this.layerCam("deep"));
-      const vis = z > 16.9 && _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
+      const inFront = _v.z < 1 && _v.z > -1;
+      const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
+      if (inFront) moveLabel(e, x + 12, y - 10);
+      const vis = z > 16.9 && inFront && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
       show(e, vis);
       if (vis) {
-        const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
-        moveLabel(e, x + 12, y - 10);
         const w = z > 20 ? 170 : 80;                                          // "Buradasın · Yerel Grup" / "Buradasın" (düzen okumadan)
         for (let dx = 0; dx < w; dx += 60) placed.push({ x: x + dx, y });
       }
@@ -1129,19 +1143,23 @@ export class Act2Flight implements Scene {
     const alt = this.w.state.altKm;
     for (const { b, e } of this.ui.bodyLabels) {
       let on = false, cam: THREE.Camera = solarCam;
+      const dB = b.posKm.distanceTo(this.C);
+      const farEnough = b.kind === "galaxy" && b.key !== "sgra" && b.key !== "s2" ? dB > 3 * (b.rKm ?? 0)
+        : dB > Math.max(3 * (b.rKm ?? 0), 2 * b.endKm);                                   // çok yakındayken etiket yok (cisim ekranı kaplar)
       if (b.kind === "galaxy") {
-        on = (b.cosmic ? cosmicWeight(z) : b.key === "mw" ? smoothstep(16.6, 17.4, z) : (b.key === "sgra" || b.key === "s2") ? smoothstep(16.6, 17.0, z)
-          : smoothstep(17.6, 18.4, z)) > 0.3
-          && b.posKm.distanceTo(this.C) > 3 * (b.rKm ?? 0);                       // çok yakındayken etiket yok
+        on = (b.cosmic ? cosmicWeight(z) : b.key === "mw" ? smoothstep(16.6, 17.4, z)
+          : b.key === "sgra" ? Math.max(smoothstep(16.6, 17.0, z), this.w.state.bhW)
+          : b.key === "s2" ? this.w.state.bhW : smoothstep(17.6, 18.4, z)) > 0.3 && farEnough;
         if (b.key === "sgra" || b.key === "s2") { cam = this.layerCam("bh"); _v.copy(b.posKm).sub(this.w.sgra.posKm).divideScalar(this.w.sgra.rsKm); }
         else { cam = this.layerCam("deep"); _v.copy(b.posKm).divideScalar(LY_KM); }   // deep katmanının yakın düzlemi ışık yılları
-      } else if (b.key === "moon") { on = earthWeight(z) > 0.2 && alt > SWITCH_KM; cam = earthCam; _v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM); }
-      else { on = solarWeight(z) > 0.2; _v.copy(b.posKm).divideScalar(AU_KM); }
+      } else if (b.key === "moon") { on = earthWeight(z) > 0.2 && alt > SWITCH_KM && farEnough; cam = earthCam; _v.copy(b.posKm).sub(this.w.earth.originKm).divideScalar(EARTH_RADIUS_KM); }
+      else { on = solarWeight(z) > 0.2 && farEnough; _v.copy(b.posKm).divideScalar(AU_KM); }
       _v.project(cam);
       const x = ((_v.x + 1) / 2) * innerWidth, y = ((1 - _v.y) / 2) * innerHeight;
-      const onScreen = _v.z < 1 && _v.z > -1 && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
-      // Ekrandayken gizlense bile (solarak kaybolurken) cismi izlesin: yoksa son yerinde donmuş görünür
-      if (onScreen) moveLabel(e, x + 10, y - 10);
+      const inFront = _v.z < 1 && _v.z > -1;
+      const onScreen = inFront && Math.abs(_v.x) < 0.95 && Math.abs(_v.y) < 0.95;
+      // Kameranın önündeyken gizlense bile (solarak kaybolurken) cismi izlesin: yoksa son yerinde donmuş görünür
+      if (inFront) moveLabel(e, x + 10, y - 10);
       const vis = on && onScreen && !placed.some(p => Math.abs(p.x - x) < 70 && Math.abs(p.y - y) < 16);
       show(e, vis);
       if (vis) placed.push({ x, y });
@@ -1155,15 +1173,16 @@ export class Act2Flight implements Scene {
     const cx = this.C.x / LY_KM, cy = this.C.y / LY_KM, cz = this.C.z / LY_KM;
     const chosen = new Set<HTMLElement>();
     for (const L of this.ui.starLabels) {
-      if (z < 12.3 || z > 16.5) continue;
       const i = L.i, dly = sky.starDly[i];
       if (dly == null) continue;
       const px = P[i * 3], py = P[i * 3 + 1], pz = P[i * 3 + 2];
       _v.set(px, py, pz).project(cam);
-      if (_v.z >= 1 || _v.z <= -1 || Math.abs(_v.x) > 0.95 || Math.abs(_v.y) > 0.95) continue;
+      if (_v.z >= 1 || _v.z <= -1) continue;
       const x = (_v.x + 1) / 2 * innerWidth, y = (1 - _v.y) / 2 * innerHeight;
       moveLabel(L.e, x + 10, y - 10);                                       // solarak kaybolurken de yıldızı izlesin
-      if (apparentMag(sky.starMag[i], dly, Math.hypot(px - cx, py - cy, pz - cz)) > mLim - 0.5) continue;
+      if (z < 12.3 || z > 16.5 || Math.abs(_v.x) > 0.95 || Math.abs(_v.y) > 0.95) continue;
+      const dCam = Math.hypot(px - cx, py - cy, pz - cz);
+      if (dCam < 0.05 || (i === this.nearStar.i && this.w.state.starW > 0.1) || apparentMag(sky.starMag[i], dly, dCam) > mLim - 0.5) continue;
       if (!L.text) {                                                         // metin değişmez: bir kez üret
         const ll = lightLeft(dly, sky.meta.obs_year_frac);
         const dist = fmtDec(dly, dly < 100 ? 1 : 0, lang);
@@ -1195,6 +1214,7 @@ export class Act2Flight implements Scene {
   }
 
   exit() {
+    if (this.ray) { this.w.deep.scene.remove(this.ray); this.ray = null; }
     this.ui.root.remove();
     this.ctx.input.onTap = () => {};
     // Perde 1 gökyüzünü geri yükle (Perde 3 ve baştan başla)

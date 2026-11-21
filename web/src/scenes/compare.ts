@@ -223,7 +223,7 @@ export class Compare implements Scene {
       const big = it.rKm / (this.cam.position.z * Math.tan(this.cam.fov * Math.PI / 360)) * innerHeight / 2;   // görünen yarıçap (px)
       const vis = v.z < 1 && px > -100 && px < innerWidth + 100 && big > 3;
       show(this.ui.labels[i], vis);
-      if (vis) this.ui.labels[i].style.transform = `translate(${px}px, ${Math.min(py, innerHeight - 150)}px) translateX(-50%)`;
+      if (v.z < 1 && v.z > -1) this.ui.labels[i].style.transform = `translate(${px}px, ${Math.min(py, innerHeight - 150)}px) translateX(-50%)`;
     });
   }
 

@@ -21,13 +21,14 @@ export interface ScaleLayer {
 export function renderLayers(r: THREE.WebGLRenderer, layers: ScaleLayer[], camPosKm: THREE.Vector3, q: THREE.Quaternion, z: number) {
   r.clear();
   for (const L of layers) {                                // sıra: cosmic → deep → solar → earth (uzaktan yakına)
-    const w = L.weight(z);
-    if (w <= 0.001) continue;
-    L.applyWeight(w);
     L.camera.quaternion.copy(q);
     L.camera.position.copy(camPosKm).sub(L.originKm).divideScalar(L.unitKm);
     const [n, f] = L.nearFar(L.camera.position);
     L.camera.near = n; L.camera.far = f; L.camera.updateProjectionMatrix();
+    L.camera.updateMatrixWorld();                          // ağırlık 0 iken bile etiket projeksiyonu güncel kalsın
+    const w = L.weight(z);
+    if (w <= 0.001) continue;
+    L.applyWeight(w);
     r.clearDepth();
     r.render(L.scene, L.camera);
   }
