@@ -7,8 +7,16 @@ kaldığını görsün.** Ankara (Kızılay) varsayılan ve demo olarak kalır; 
 
 Kullanıcı geri bildirimi: galaksiye üstten bakılamıyor, kümelere gidilemiyor, Dünya/Ay/şehir gerçekçi değil.
 - **R1 — Dünya, Ankara, Ay, Güneş, gezegenler:** NASA Blue Marble (gündüz), Black Marble + Ankara 500 m/piksel karo (gece),
-  terminatör, okyanus yansıması, atmosfer; LRO Ay haritası ve gelgit kilidi; kenarı kararan Güneş; IAU dönme eksenleri;
-  Cassini Jüpiter haritası; diğer gezegenler temsili doku; Satürn halkaları gerçek yarıçaplarla.
+  terminatör, okyanus yansıması, atmosfer; LRO Ay haritası ve gelgit kilidi; IAU dönme eksenleri (Güneş dahil);
+  Cassini Jüpiter haritası; diğer gezegenler Solar System Scope dokuları (CC BY 4.0, NASA görev görüntülerinden);
+  Satürn halkaları gerçek yarıçaplarla; atmosfersiz yüzeyde Lommel–Seeliger, dev gezegenlerde Minnaert kenar kararması.
+- **R1b — Yıldız yüzeyleri (22.11.2026):** Güneş ve yaklaşılan yıldızlar düz küre değil: kaynayan granülasyon (Güneş'te
+  ~1.000 km; granül boyutu yarıçapla büyür, süperdevlerde birkaç dev hücre), süpergranül ağı, fakülalar, lekeler,
+  dalga boyuna bağlı kenar kararması; çevrede kromosfer, Baumbach profilli korona (akıntılar, kutup tüyleri) ve kıvrımlı
+  çıkıntılar. Hepsi temsili ve etiketli; boyut, renk ve kenar kararması gerçek. Güneş'e yüzeyin ~14.000 km üstüne kadar inilir.
+- **R1c — Asteroit ve Kuiper kuşağı (22.11.2026):** JPL SBDB'den ana kuşak (H < 15, ~64.000), Jüpiter Truvalıları
+  (H < 14, ~4.500) ve Neptün ötesi cisimler (~8.400); yörünge elemanları pipeline'da Kepler ile gözlem gecesine taşınır
+  (Horizons'la Ceres farkı ~0,001 AB). "Asteroit kuşağı" ve "Kuiper kuşağı" durakları ekliptiğin kuzeyinden bakar.
 - **R2 — Samanyolu ve Yerel Grup:** üstten ve yandan bakılabilir, katmanlı disk + parçacıklar (temsili; konum ve yön gerçek).
 - **R3 — Kozmik ölçek:** 2MRS (~44.600 gerçek galaksi), H0 = 70 ile uzaklık, kümeler, kaçınma bölgesi; ~1,5 milyar ışık yılına kadar.
 - **R5 — Gözlemlenebilir evren:** Planck 2018 düz ΛCDM ile ışık yolculuğu süresi (100 milyon ışık yılının ötesinde),

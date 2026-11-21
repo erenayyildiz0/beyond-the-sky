@@ -53,4 +53,8 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
   ESA and the Planck Collaboration, CC BY-SA 3.0 IGO. 2MRS'in ötesindeki galaksi dağılımı temsilidir.
 - Galaksi görünümleri (Samanyolu, Andromeda, Üçgen, Macellan Bulutları, 2MRS) temsilidir; konum, yön ve boyut gerçektir.
   Samanyolu ölçüleri: Bland-Hawthorn & Gerhard 2016; çubuk açısı Wegg ve ark. 2015.
-- Merkür, Venüs, Mars, Satürn, Uranüs ve Neptün yüzey dokuları temsilidir (boyut, eksen ve konum gerçek); ekranda belirtilir.
+- Merkür, Venüs, Mars, Satürn, Uranüs ve Neptün dokuları: Solar System Scope (CC BY 4.0), NASA görev görüntülerinden
+  derlenmiş (Neptün 1989 Voyager 2). Güneş'in dönme ekseni IAU WGCCRE 2015.
+- Asteroit kuşağı, Jüpiter Truvalıları ve Kuiper kuşağı: NASA/JPL Small-Body Database (SBDB Query API) yörünge elemanları,
+  gözlem gecesine iki cisim Kepler çözümüyle taşınır.
+- Yıldız yüzeyleri (granülasyon, lekeler, korona, çıkıntılar) temsilidir; korona parlaklık profili Baumbach (1937).

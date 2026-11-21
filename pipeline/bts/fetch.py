@@ -22,6 +22,9 @@ DOWNLOADS_R1 = {
     "PIA07782.jpg": NASA_ASSETS + "psd/photojournal/pia/pia07/pia07782/PIA07782.jpg",
     # R5: Planck CMB (ESA and the Planck Collaboration, CC BY-SA 3.0 IGO)
     "Planck_CMB.jpg": "https://media.esa.int/legacy/web/images/esa_multimedia/images/2013/03/planck_cmb/12583930-4-eng-GB/Planck_CMB.jpg",
+    # Gezegen dokuları: Solar System Scope (CC BY 4.0), NASA görevlerinin verisinden derlenmiş haritalar
+    **{f"sss_2k_{n}.jpg": f"https://www.solarsystemscope.com/textures/download/2k_{n}.jpg"
+       for n in ("mercury", "venus_atmosphere", "mars", "saturn", "uranus", "neptune")},
     # R3: 2MRS (Huchra ve ark. 2012)
     "2mrs_v240.tgz": "http://tdc-www.harvard.edu/2mrs/2mrs_v240.tgz",
 }

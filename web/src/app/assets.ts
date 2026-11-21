@@ -34,6 +34,7 @@ export interface SkyJson {
     count: number; h0: number; max_mly: number;
     clusters: { key: string; name_tr: string; name_en: string; enu_mly: number[]; dist_mly: number }[];
   };
+  smallbodies?: { count: number; groups: { key: string; n: number; h_max: number | null; r_au_p50: number }[]; jd_tdb: number };
   realism: {
     ankara_patch: { lat_min: number; lat_max: number; lon_min: number; lon_max: number };
     poles_enu: Record<string, number[]>;
@@ -210,6 +211,14 @@ export function loadCosmic() {
     fetch(`${BASE}data/cosmic_names.json`).then(r => r.json() as Promise<{ i: number; name: string }[]>),
   ]).then(([buf, names]) => ({ data: new Float32Array(buf), names: new Map(names.map(x => [x.i, x.name])) }));
   return cosmicP;
+}
+
+let smallP: Promise<ArrayBuffer> | null = null;
+/** Asteroit ve Kuiper kuşağı: smallbodies.bin (Float32 × 3: güneş merkezli ENU [AB]; ardından Uint8 grup) */
+export function loadSmallBodies() {
+  if (smallP) return smallP;
+  smallP = fetch(`${BASE}data/smallbodies.bin`).then(r => { if (!r.ok) throw new Error(`smallbodies.bin: ${r.status}`); return r.arrayBuffer(); });
+  return smallP;
 }
 
 let detailP: Promise<{ ci: (number | null)[]; con: string[]; spect: (string | null)[] }> | null = null;

@@ -16,6 +16,7 @@ TILE_PX = 21600
 
 # Dönme ekseni kuzey kutbu (ICRS RA/Dec, derece): IAU WGCCRE 2015 (Archinal ve ark. 2018, Celest. Mech. Dyn. Astr. 130:22), J2000 değerleri
 POLES = {
+    "sun": (286.13, 63.87),
     "moon": (266.86, 65.64),
     "mercury": (281.0103, 61.4155),
     "venus": (272.76, 67.16),
@@ -25,6 +26,12 @@ POLES = {
     "uranus": (257.311, -15.175),
     "neptune": (299.36, 43.46),
 }
+
+
+# Diğer gezegenler: Solar System Scope dokuları (CC BY 4.0) — Merkür MESSENGER, Mars Viking/MGS, Venüs bulutları,
+# Satürn Cassini, Uranüs ve Neptün Voyager 2 görüntülerinden derlenmiş (Neptün'deki Büyük Karanlık Leke 1989'daki hâli)
+PLANET_MAPS = {"mercury": "sss_2k_mercury.jpg", "venus": "sss_2k_venus_atmosphere.jpg", "mars": "sss_2k_mars.jpg",
+               "saturn": "sss_2k_saturn.jpg", "uranus": "sss_2k_uranus.jpg", "neptune": "sss_2k_neptune.jpg"}
 
 
 def resize_save(src: Image.Image, path: Path, size, quality=85):
@@ -83,4 +90,6 @@ def build_bodies(cfg, out_dir: Path) -> list[Path]:
 
     jup = Image.open(raw / "PIA07782.jpg").convert("RGB")
     written.append(resize_save(jup, out_dir / "planet_jupiter.jpg", (2048, 1024), 88))
+    for key, src in PLANET_MAPS.items():
+        written.append(resize_save(Image.open(raw / src).convert("RGB"), out_dir / f"planet_{key}.jpg", (2048, 1024), 88))
     return written

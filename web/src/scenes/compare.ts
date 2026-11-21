@@ -4,8 +4,8 @@ import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import vert from "../render/shaders/planet.vert.glsl?raw";
 import planetFrag from "../render/shaders/planet.frag.glsl?raw";
-import starVert from "../render/shaders/earth.vert.glsl?raw";
-import starFrag from "../render/shaders/starBody.frag.glsl?raw";
+import { PLANET_LOOK } from "../render/solar";
+import { applyStarLook, createStarSurfaceMaterial, SUN_TINT } from "../render/starSurface";
 import { EARTH_RADIUS_KM, MOON_RADIUS_KM, PLANET_RADIUS_KM, SUN_RADIUS_KM } from "../science/constants";
 import { kelvinToRgb, PUBLISHED_RADII } from "../science/stars";
 import { smoothstep } from "../science/visibility";
@@ -22,13 +22,13 @@ interface Item {
 const NASA = "NASA Planetary Fact Sheet";
 export const ITEMS: Item[] = [
   { key: "moon", tr: "Ay", en: "Moon", rKm: MOON_RADIUS_KM, source: NASA, look: { kind: 0, color: "#a0a0a0", map: "moon_2k.jpg" } },
-  { key: "mercury", tr: "Merkür", en: "Mercury", rKm: PLANET_RADIUS_KM.mercury, source: NASA, look: { kind: 1, color: "#8C8780" } },
-  { key: "mars", tr: "Mars", en: "Mars", rKm: PLANET_RADIUS_KM.mars, source: NASA, look: { kind: 3, color: "#C26B40" } },
-  { key: "venus", tr: "Venüs", en: "Venus", rKm: PLANET_RADIUS_KM.venus, source: NASA, look: { kind: 2, color: "#EDD9A8" } },
+  { key: "mercury", tr: "Merkür", en: "Mercury", rKm: PLANET_RADIUS_KM.mercury, source: NASA, look: { kind: 1, color: "#8C8780", map: "planet_mercury.jpg" } },
+  { key: "mars", tr: "Mars", en: "Mars", rKm: PLANET_RADIUS_KM.mars, source: NASA, look: { kind: 3, color: "#C26B40", map: "planet_mars.jpg" } },
+  { key: "venus", tr: "Venüs", en: "Venus", rKm: PLANET_RADIUS_KM.venus, source: NASA, look: { kind: 2, color: "#EDD9A8", map: "planet_venus.jpg" } },
   { key: "earth", tr: "Dünya", en: "Earth", rKm: EARTH_RADIUS_KM, source: NASA, look: { kind: 0, color: "#3366aa", map: "earth_day_4k.jpg" } },
-  { key: "neptune", tr: "Neptün", en: "Neptune", rKm: PLANET_RADIUS_KM.neptune, source: NASA, look: { kind: 6, color: "#5679D9" } },
-  { key: "uranus", tr: "Uranüs", en: "Uranus", rKm: PLANET_RADIUS_KM.uranus, source: NASA, look: { kind: 5, color: "#AEDCE6" } },
-  { key: "saturn", tr: "Satürn", en: "Saturn", rKm: PLANET_RADIUS_KM.saturn, source: NASA, look: { kind: 4, color: "#E3CC99" } },
+  { key: "neptune", tr: "Neptün", en: "Neptune", rKm: PLANET_RADIUS_KM.neptune, source: NASA, look: { kind: 6, color: "#5679D9", map: "planet_neptune.jpg" } },
+  { key: "uranus", tr: "Uranüs", en: "Uranus", rKm: PLANET_RADIUS_KM.uranus, source: NASA, look: { kind: 5, color: "#AEDCE6", map: "planet_uranus.jpg" } },
+  { key: "saturn", tr: "Satürn", en: "Saturn", rKm: PLANET_RADIUS_KM.saturn, source: NASA, look: { kind: 4, color: "#E3CC99", map: "planet_saturn.jpg" } },
   { key: "jupiter", tr: "Jüpiter", en: "Jupiter", rKm: PLANET_RADIUS_KM.jupiter, source: NASA, look: { kind: 0, color: "#D8C3A0", map: "planet_jupiter.jpg" } },
   { key: "proxima", tr: "Proxima Centauri", en: "Proxima Centauri", rKm: 0.1542 * SUN_RADIUS_KM, source: "Boyajian ve ark. 2012, ApJ 757, 112", look: { star: 3042 } },
   { key: "sun", tr: "Güneş", en: "Sun", rKm: SUN_RADIUS_KM, source: "IAU 2015 B3", look: { star: 5772 } },
@@ -74,14 +74,16 @@ export class Compare implements Scene {
     let mat: THREE.ShaderMaterial;
     if ("star" in it.look) {
       const [r, g, b] = kelvinToRgb(it.look.star);
-      mat = new THREE.ShaderMaterial({ vertexShader: starVert, fragmentShader: starFrag,
-        uniforms: { uColor: { value: new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace) }, uOpacity: { value: 1 } } });
+      mat = createStarSurfaceMaterial(1.3);
+      applyStarLook(mat, null, new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace), it.look.star, it.rKm / SUN_RADIUS_KM, x + 1);
+      if (it.key === "sun") mat.uniforms.uTint.value.set(...SUN_TINT);
     } else {
       const look = it.look;
       mat = new THREE.ShaderMaterial({ vertexShader: vert, fragmentShader: planetFrag, uniforms: {
         uMap: { value: null }, uHasMap: { value: 0 }, uKind: { value: look.kind }, uColor: { value: new THREE.Color(look.color) },
         uSunPos: { value: this.light }, uOpacity: { value: 1 }, uCenter: { value: new THREE.Vector3(x, 0, 0) }, uRadius: { value: it.rKm },
         uRingN: { value: new THREE.Vector3(0, 1, 0) }, uRingIn: { value: 0 }, uRingOut: { value: 0 },
+        uMinnaert: { value: PLANET_LOOK[it.key]?.[2] ?? 1 }, uAtmo: { value: new THREE.Vector4(...(PLANET_LOOK[it.key]?.[3] ?? [0, 0, 0, 0])) },
       } });
       if (look.map) loadDataTexture(this.ctx.renderer, look.map).then(tx => { mat.uniforms.uMap.value = tx; mat.uniforms.uHasMap.value = 1; }).catch(e => console.warn(e));
     }

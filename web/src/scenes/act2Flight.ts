@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
-import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture } from "../app/assets";
+import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture, loadSmallBodies } from "../app/assets";
 import { createStarBodyLayer } from "../render/starBody";
 import { kelvinToRgb, starRadius } from "../science/stars";
 import { createConstellationLines } from "../render/constellations";
@@ -119,7 +119,10 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   loadDataTexture(r, `earth_day_${big ? "8k" : "4k"}.jpg`).then(t => earth.setDayTexture(t)).catch(e => console.warn(e));
   loadDataTexture(r, "ankara_night_2k.jpg").then(t => earth.setPatchTexture(t)).catch(e => console.warn(e));
   loadDataTexture(r, `moon_${big ? "4k" : "2k"}.jpg`).then(t => earth.setMoonTexture(t)).catch(e => console.warn(e));
-  loadDataTexture(r, "planet_jupiter.jpg").then(t => solar.setJupiterTexture(t)).catch(e => console.warn(e));
+  const sb = sky.smallbodies;
+  if (sb) loadSmallBodies().then(buf => solar.setSmallBodies(buf, sb.count, matchMedia("(pointer: coarse)").matches ? 0.35 : 1)).catch(e => console.warn(e));
+  for (const k of ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"])
+    loadDataTexture(r, `planet_${k}.jpg`).then(t => solar.setPlanetTexture(k, t)).catch(e => console.warn(e));
 
   const route = routeFromSky(sky);
   const m = sky.meta;
@@ -132,8 +135,8 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     earthCenter, surfaceKm: ankaraRadiusKm(m.location.height_m),
     bodies: [
       { key: "moon", pos: moonKm, radiusKm: MOON_RADIUS_KM, minDistKm: 1.5 * MOON_RADIUS_KM },
-      { key: "sun", pos: sunKm, radiusKm: SUN_RADIUS_KM, minDistKm: 1.5 * SUN_RADIUS_KM },
-      ...planets.map(p => ({ key: p.b.key, pos: p.posKm, radiusKm: p.r, minDistKm: 1.5 * p.r })),
+      { key: "sun", pos: sunKm, radiusKm: SUN_RADIUS_KM, minDistKm: 1.02 * SUN_RADIUS_KM },   // yüzeyin ~14.000 km üstü: granüller görünsün
+      ...planets.map(p => ({ key: p.b.key, pos: p.posKm, radiusKm: p.r, minDistKm: 1.2 * p.r })),
       { key: "voyager", pos: voyKm, radiusKm: 0, minDistKm: 100 },
     ],
     starPosLy: sw.starGeo.getAttribute("position").array as Float32Array,
@@ -191,6 +194,16 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     const R = gg.key === "mw" ? 50_000 : gal!.draw_radius_ly;
     bodies.push({ key: gg.key, name: t(`body.${gg.key}` as "body.mw"), posKm: gg.layered.frame.center.clone().multiplyScalar(LY_KM),
       endKm: 2.5 * R * LY_KM, kind: "galaxy", rKm: R * LY_KM });
+  }
+  // Kuşaklar: ekliptiğin kuzeyinden Güneş'e bakış (asteroit kuşağı + Truvalılar; Kuiper kuşağı)
+  if (sky.smallbodies) {
+    const ep = sky.frames.ecliptic_pole_enu;
+    const ecl = enuToThree(ep[0], ep[1], ep[2]).normalize();
+    const toEarth = sunKm.clone().negate().projectOnPlane(ecl).normalize();
+    for (const [key, up, back] of [["belt", 8.5, 3], ["kuiper", 90, 30]] as const) {
+      const pos = sunKm.clone().addScaledVector(ecl, up * AU_KM).addScaledVector(toEarth, back * AU_KM);
+      stops.push({ key, pos, look: sunKm.clone().sub(pos).normalize(), z: Math.log10(pos.length()) });
+    }
   }
   // Yeni duraklar: galaksinin üstü (galaktik kuzeyden 120.000 ışık yılı, merkeze bakış) ve Yerel Grup genel görünümü
   const topPos = mwCenter.clone().addScaledVector(gz, 120_000).multiplyScalar(LY_KM);
@@ -290,7 +303,7 @@ export class Act2Flight implements Scene {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
-    labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
+    labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblBelts: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
     lblGalaxy: HTMLElement; lblLocal: HTMLElement; hereLabel: HTMLElement; lblCosmic: HTMLElement; lblZoa: HTMLElement; lblWeb: HTMLElement; lblCmb: HTMLElement;
     bodyLabels: { b: Target; e: HTMLElement }[]; card: PickCard; extra: HTMLElement;
   };
@@ -385,6 +398,7 @@ export class Act2Flight implements Scene {
     const labels = el("div", "layer-labels on", undefined, root);
     const lblEarth = el("div", "layer-label", t("label.earth"), labels);
     const lblSolar = el("div", "layer-label", t("label.solar"), labels);
+    const lblBelts = el("div", "layer-label", t("label.belts"), labels);
     const lblStars = el("div", "layer-label", t("label.stars"), labels);
     const lblExposure = el("div", "layer-label exposure", t("act2.exposure"), labels);
     const lblGalaxy = el("div", "layer-label", t("label.galaxy"), labels);
@@ -419,7 +433,7 @@ export class Act2Flight implements Scene {
     const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root) }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
-    this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
+    this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblBelts, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
   }
 
   private radiusCache = new Map<number, ReturnType<typeof starRadius>>();
@@ -544,6 +558,11 @@ export class Act2Flight implements Scene {
         const g = sky.galaxies.find(x => x.key === "m31")!;
         const w = g.alt > 80 ? "zenith" : g.alt > 30 ? "high" : "low";
         return t("stop.m31", { where: t(`stop.m31.where.${w}` as "stop.m31.where.high") });
+      }
+      case "belt": case "kuiper": {
+        const g = (k: string) => sky.smallbodies?.groups.find(x => x.key === k)?.n ?? 0;
+        return key === "belt" ? t("stop.belt", { n: fmtInt(g("main"), lang), tj: fmtInt(g("trojan"), lang) })
+                              : t("stop.kuiper", { n: fmtInt(g("kuiper"), lang) });
       }
       case "galaxyTop": return t("stop.galaxyTop", { d: fmtInt(SUN_GALACTOCENTRIC_LY, lang) });
       case "localGroup": return t("stop.localGroup", { d: fmtInt(sky.galaxies.find(x => x.key === "m31")!.dist_ly, lang) });
@@ -699,7 +718,7 @@ export class Act2Flight implements Scene {
       // Yükseliş sürerken İleri hep yukarı (kamera aşağı, Ankara'ya bakarken bile); sonra baktığın yöne
       const dir = this.ascentAuto ? _v.copy(this.C).sub(space.earthCenter).normalize() : moveDirection(this.C, space, this.ori.f, _v);
       this.C.addScaledVector(dir, this.v * dt);
-      resolveCollisions(this.C, space, this.nearStar.i, sInfo ? Math.max(1.5 * starRkm, 1e5) : undefined);
+      resolveCollisions(this.C, space, this.nearStar.i, sInfo ? Math.max(1.02 * starRkm, 1e5) : undefined);
     }
     const alt = altitudeKm(this.C, space);
 
@@ -733,7 +752,7 @@ export class Act2Flight implements Scene {
     this.w.starOrigin.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).multiplyScalar(LY_KM);
     if (i !== this.starBodyIdx) {
       const [cr, cg, cb] = kelvinToRgb(info.T);                    // yakından: beyaza karıştırılmamış gerçek renk
-      this.w.starBody.set(info.R, new THREE.Color().setRGB(cr, cg, cb, THREE.SRGBColorSpace));
+      this.w.starBody.set(info.R, new THREE.Color().setRGB(cr, cg, cb, THREE.SRGBColorSpace), info.T, i + 1);
       this.starBodyIdx = i;
     }
     const cam = this.layerCam("star");
@@ -845,6 +864,7 @@ export class Act2Flight implements Scene {
     const ew = earthWeight(z) * smoothstep(6, 25, alt), sw = solarWeight(z);
     show(this.ui.lblEarth, ew > 0.5);
     show(this.ui.lblSolar, sw > 0.5);
+    show(this.ui.lblBelts, sw > 0.5 && !!this.ctx.assets.sky.smallbodies && this.C.distanceTo(this.w.solar.sunPos.clone().multiplyScalar(AU_KM)) > 3 * AU_KM);
     show(this.ui.lblStars, z > 11.8);
     show(this.ui.lblExposure, exposureLimit(z) > 6.7);
     show(this.ui.lblGalaxy, smoothstep(16.6, 17.4, z) > 0.5);
@@ -982,7 +1002,8 @@ export class Act2Flight implements Scene {
       lines.push(t("card.light", { t: fmtLightTime(D / C_KM_S, lang) }));
     }
     if (["mercury", "venus", "mars", "saturn", "uranus", "neptune"].includes(tg.key)) lines.push(t("card.repTexture"));
-    if (tg.key === "sun") lines.push(t("card.repGlow"));
+    if (tg.key === "jupiter") lines.push(t("card.jupiterMap"));
+    if (tg.key === "sun" || tg.kind === "star") lines.push(t("card.repGlow"));
     if (tg.note) lines.push(tg.note);
     else if (tg.kind === "galaxy") lines.push(t("card.repGalaxy"));
     return { title: tg.name, lines, fly: tg.kind === "earth" ? "home" : "here" };

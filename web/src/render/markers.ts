@@ -39,7 +39,7 @@ export function circleLine(c: THREE.Vector3, n: THREE.Vector3, r: number, color:
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
-  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending });
+  const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending });   // cisimlerin arkasında kalsın
   const line = new THREE.LineLoop(geo, mat);
   line.frustumCulled = false;
   return { line, mat, base: opacity };

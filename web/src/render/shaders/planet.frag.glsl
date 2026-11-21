@@ -1,7 +1,11 @@
-// Gezegenler (R1): Jüpiter Cassini haritası (PIA07782); diğerleri gerçek renk ve bant yapısına dayalı temsili doku.
-// Aydınlatma Güneş'in konumuna göre Lambert. uKind: 0 doku · 1 kayalık (Merkür) · 2 Venüs · 3 Mars · 4 Satürn · 5 Uranüs · 6 Neptün
+// Gezegenler (R1): Jüpiter Cassini haritası (PIA07782), diğerleri Solar System Scope dokuları (NASA görev verisinden).
+// Doku yüklenene kadar gerçek renk ve bant yapısına dayalı temsili doku. uKind: 0 doku · 1 kayalık (Merkür) · 2 Venüs · 3 Mars
+// · 4 Satürn · 5 Uranüs · 6 Neptün. Aydınlatma Güneş'in konumuna göre: kayalıkta Lommel–Seeliger (atmosfersiz yüzey, Ay gibi
+// kenara doğru kararmaz), dev gezegenlerde Minnaert kenar kararması; atmosfer kenarı (Venüs pusu, Mars'ın ince havası) temsili.
 uniform sampler2D uMap;
 uniform float uKind, uOpacity, uHasMap;
+uniform float uMinnaert;    // 0 → Lommel–Seeliger (atmosfersiz), > 0 → Minnaert k
+uniform vec4 uAtmo;         // atmosfer kenarı rengi + şiddeti
 uniform vec3 uColor, uSunPos, uRingN;   // uRingN: halka düzlemi normali (Satürn), 0 ise yok
 uniform float uRingIn, uRingOut;        // halka yarıçapları (gezegen yarıçapı biriminde)
 uniform vec3 uCenter;
@@ -21,7 +25,8 @@ float fbm(vec3 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a
 
 vec3 albedo() {
   float lat = vLocal.y;                                  // yerel +y = kuzey kutbu
-  if (uKind < 0.5) return texture2D(uMap, vUv).rgb;
+  if (uHasMap > 0.5) return texture2D(uMap, vUv).rgb;
+  if (uKind < 0.5) return uColor;
   if (uKind < 1.5) return uColor * (0.75 + 0.35 * fbm(vLocal * 9.0)) * (1.0 - 0.25 * smoothstep(0.62, 0.7, fbm(vLocal * 22.0)));
   if (uKind < 2.5) return uColor * (0.9 + 0.12 * fbm(vec3(lat * 6.0, vLocal.xz * 2.0)));
   if (uKind < 3.5) {
@@ -36,7 +41,11 @@ vec3 albedo() {
 void main() {
   vec3 N = normalize(vN);
   vec3 L = normalize(uSunPos - vWorld);
-  float l = max(dot(N, L), 0.0);
+  vec3 V = normalize(cameraPosition - vWorld);
+  float mu0 = max(dot(N, L), 0.0), mu = max(dot(N, V), 1e-3);
+  float l = uMinnaert > 0.0 ? pow(mu0, uMinnaert) * pow(mu, uMinnaert - 1.0)
+                            : 2.0 * mu0 / (mu0 + mu);           // Lommel–Seeliger (tam evrede 1)
+  l = min(l, 1.6);
   // Satürn: halkaların gezegen üstüne düşen gölgesi
   if (uRingIn > 0.0) {
     float t = -dot(vWorld - uCenter, uRingN) / dot(L, uRingN);
@@ -46,6 +55,9 @@ void main() {
     }
   }
   vec3 col = albedo() * (0.02 + 0.98 * l);
+  // Atmosfer: aydınlık taraftaki kenarda saçılan ışık, gece tarafına hafif taşar
+  float rim = pow(1.0 - mu, 3.0) * smoothstep(-0.25, 0.35, dot(N, L));
+  col += uAtmo.rgb * uAtmo.a * rim;
   gl_FragColor = vec4(col * uOpacity, 1.0);
   #include <colorspace_fragment>
 }

@@ -27,7 +27,8 @@ from bts.visibility import count_visible, visible_mask
 SOURCES = ["HYG v4.1 (CC BY-SA 4.0)", "NASA SVS Deep Star Maps 2020", "NASA Black Marble 2016",
            "NASA Blue Marble Next Generation (Kasım 2004)", "NASA SVS 4720 / LRO (Ay)", "NASA/JPL/SSI Cassini PIA07782 (Jüpiter)",
            "IAU WGCCRE 2015 (dönme eksenleri)", "2MRS (Huchra ve ark. 2012, ApJS 199, 26)",
-           "ESA and the Planck Collaboration — Planck CMB (CC BY-SA 3.0 IGO)"]
+           "ESA and the Planck Collaboration — Planck CMB (CC BY-SA 3.0 IGO)",
+           "Solar System Scope gezegen dokuları (CC BY 4.0)", "NASA/JPL SBDB (asteroit ve Kuiper kuşağı yörüngeleri)"]
 MIN_MISS_LY = 0.5
 
 
@@ -219,6 +220,10 @@ def main() -> None:
     cw, cmeta = build_cosmic(cfg, m.R, out)
     m.sky["cosmic"] = cmeta
     sizes.update({p.name: p.stat().st_size for p in cw})
+    from bts.smallbodies import build_smallbodies
+    sw, smeta = build_smallbodies(cfg, m.t, m.R, out)
+    m.sky["smallbodies"] = smeta
+    sizes.update({p.name: p.stat().st_size for p in sw})
     sizes["sky.json"] = write_json(m.sky, out / "sky.json")
     altaz8 = None
     if not args.skip_images:

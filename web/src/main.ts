@@ -3,6 +3,7 @@ import { loadAssets, readParams } from "./app/assets";
 import { Director, type AppContext, type Tunables } from "./app/director";
 import { Input } from "./app/input";
 import { AdaptiveRes } from "./app/adaptiveRes";
+import { STAR_TIME } from "./render/starSurface";
 import { createRenderer } from "./app/renderer";
 import { STAR_DEFAULTS } from "./render/stars";
 import { MW_GAIN_DEFAULT } from "./render/skyDome";
@@ -102,6 +103,7 @@ async function main() {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     const t0 = performance.now();
+    STAR_TIME.value = now / 1000;
     director.update(dt, now);
     const t1 = performance.now();
     director.render(renderer);
