@@ -26,6 +26,13 @@ Kullanıcı geri bildirimi: galaksiye üstten bakılamıyor, kümelere gidilemiy
   yıldızın yanına gidince gerçek yarıçaplı küre (Stefan–Boltzmann ile L ve T'den, bilinen devler için yayımlanmış ölçümler);
   Ay → Dünya → Jüpiter → Güneş → Sirius → Arcturus → Betelgeuse … yan yana karşılaştırma modu. Kaynaklı.
 
+- **R4b — Sıkı cisimler ve kara delikler (22.11.2026):** karşılaştırmaya pulsar PSR J0030+0451 (NICER, 12,7 km),
+  Cygnus X-1, Sirius B, TRAPPIST-1, Alfa Erboğa A, Deneb, Antares, Sgr A* ve M87* eklendi (kaynaklar ekranda).
+  Kara deliklerde olay ufku yarıçapı Rs = 2GM/c²; ışığın bükülmesi her piksel için Schwarzschild boş jeodeziğiyle
+  izlenir (gölge, foton halkası, bükülen arka plan); toplanma diski temsili (Doppler ve kütle çekimsel kızıla kayma dahil).
+  Uçuşta "Samanyolu'nun merkezi" durağı: Sgr A* (konum Reid & Brunthaler 2004, kütle ve uzaklık GRAVITY 2022),
+  disk ekseni bakış doğrultusuna 40° (EHT 2022: neredeyse yüzden görüyoruz).
+
 ## P1 — Perde 1: ışık seviyesi ve gerçekçi Samanyolu (karar: 21.11.2026)
 
 - Basılı tutunca ışıklar söner, **bırakınca olduğu yerde kalır** (SPEC'te 3,5 sn'de geri geliyordu). Altta bir dimmer:

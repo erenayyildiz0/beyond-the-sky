@@ -238,3 +238,4 @@ button { font: inherit; color: inherit; }
 
 .gyro-toggle { position: fixed; right: 12px; bottom: calc(12px + var(--safe-b)); z-index: 25; font: 11px var(--font-ui); color: var(--muted);
   background: var(--badge-bg); border: 1px solid var(--badge-border); border-radius: 999px; padding: 6px 10px; cursor: pointer; }
+.compare-note { max-width: min(560px, 90vw); color: var(--text); opacity: .8; line-height: 1.35; }

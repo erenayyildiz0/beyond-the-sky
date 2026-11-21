@@ -57,4 +57,9 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
   derlenmiş (Neptün 1989 Voyager 2). Güneş'in dönme ekseni IAU WGCCRE 2015.
 - Asteroit kuşağı, Jüpiter Truvalıları ve Kuiper kuşağı: NASA/JPL Small-Body Database (SBDB Query API) yörünge elemanları,
   gözlem gecesine iki cisim Kepler çözümüyle taşınır.
+- Sıkı cisimler: PSR J0030+0451 (Riley ve ark. 2019, ApJL 887, L21), Cygnus X-1 (Miller-Jones ve ark. 2021, Science 371,
+  1046), Sirius B (Bond ve ark. 2017, ApJ 840, 70), Sgr A* (GRAVITY Collaboration 2022, A&A 657, L12; konum Reid & Brunthaler
+  2004, ApJ 616, 872), M87* (EHT Collaboration 2019, ApJL 875, L6). Yıldızlar: TRAPPIST-1 (Agol ve ark. 2021), Alfa Erboğa A
+  (Kervella ve ark. 2017), Deneb (Schiller & Przybilla 2008), Antares (Ohnaka ve ark. 2013 + van Leeuwen 2007).
+- Kara delik görüntüleri: ışık bükülmesi Schwarzschild jeodeziklerinden hesaplanır; disk ve arka plan yıldızları temsilidir.
 - Yıldız yüzeyleri (granülasyon, lekeler, korona, çıkıntılar) temsilidir; korona parlaklık profili Baumbach (1937).

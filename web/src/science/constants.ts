@@ -20,3 +20,11 @@ export const PLANET_RADIUS_KM: Record<string, number> = {
 // Satürn halkaları (km): NASA Saturnian Rings Fact Sheet (nssdc.gsfc.nasa.gov/planetary/factsheet/satringfact.html)
 export const SATURN_EQ_RADIUS_KM = 60_268;          // ekvator yarıçapı (NASA Saturn Fact Sheet)
 export const SATURN_RINGS_KM = { cIn: 74_658, bIn: 92_000, cassiniIn: 117_580, aIn: 122_170, aOut: 136_775 };
+
+// Kara delikler ve sıkı cisimler. Schwarzschild yarıçapı Rs = 2GM/c²; GM☉ = 1,3271244e20 m³/s² (IAU 2015 B3) → 2,95325 km/M☉
+export const RS_KM_PER_MSUN = 2 * 1.3271244e20 / (C_KM_S * 1000) ** 2 / 1000;
+export const SGRA_MASS_MSUN = 4.297e6;           // GRAVITY Collaboration 2022, A&A 657, L12
+export const SGRA_DIST_PC = 8277;                // aynı çalışma (R0)
+export const SGRA_RA_DEG = (17 + 45 / 60 + 40.0409 / 3600) * 15;   // Reid & Brunthaler 2004, ApJ 616, 872 (ICRS)
+export const SGRA_DEC_DEG = -(29 + 0 / 60 + 28.118 / 3600);
+export const PC_LY = 3.261563777;                // 1 parsek (IAU 2015 B2) ışık yılı cinsinden
