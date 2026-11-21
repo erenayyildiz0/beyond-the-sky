@@ -6,6 +6,6 @@ export default defineConfig(({ mode }) => ({
   base: "./",                                   // GitHub Pages alt yolunda da çalışsın
   plugins: mode === "https" ? [basicSsl()] : [],
   server: { host: true },                       // telefondan erişim için
-  build: { target: "es2020", assetsInlineLimit: 0 },
+  build: { target: "es2020", assetsInlineLimit: 0, chunkSizeWarningLimit: 800 },   // three.js tek parça ~560 KB
   test: { include: ["tests/**/*.test.ts"] },
 }));

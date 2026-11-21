@@ -1,0 +1,25 @@
+import type { Key } from "./tr";
+
+export const en: Record<Key, string> = {
+  "loading": "Loading {n}%",
+  "intro.place": "{place} · {date} · {time}",
+  "intro.title": "Look up.",
+  "intro.start": "Begin",
+  "intro.sound": "Best with sound · headphones recommended",
+  "act1.now.tonight": "This is tonight's sky as seen from {place}.",
+  "act1.now.date": "This is the sky you could see from {place} on {date}.",
+  "act1.raise": "Raise your phone to the sky.",
+  "act1.drag": "Drag to look around.",
+  "act1.hold": "Press and hold to turn off the lights",
+  "act1.count": "{n} stars",
+  "act1.badge": "SIMULATION · real star positions, estimated visibility",
+  "act1.reveal1": "They were always there.",
+  "act1.reveal2": "{n} stars. And the Milky Way.",
+  "act1.up": "Go up",
+  "common.next": "Continue",
+  "gyro.on": "Motion on",
+  "gyro.off": "Motion off",
+  "gyro.fixNorth": "Drag sideways to fix north",
+  "fallback.webgl": "This experience needs WebGL. Try a current browser.",
+  "dev.next": "Act 2 (The Journey) arrives in M3. Press R to start over.",
+};

@@ -1,0 +1,145 @@
+import * as THREE from "three";
+
+export interface View { az_deg: number; horizon_screen_y: number; vfov_landscape_deg: number; vfov_portrait_deg: number }
+export interface VisibilityCfg { sqm_city: number; sqm_dark: number; glow_city_mag: number; glow_dark_mag: number; extinction_k: number }
+export interface Body { key: string; name_tr: string; name_en: string; alt: number; az: number; dist_au: number; mag: number; rgb: [number, number, number] }
+export interface Galaxy { key: string; enu_dir: number[]; dist_ly: number; alt: number; az: number; draw_radius_ly: number; normal_enu?: number[]; major_enu?: number[] }
+
+/** sky.json v2 (SPEC §5.11) */
+export interface SkyJson {
+  version: number;
+  meta: {
+    location: { name: string; name_ablative: string; lat: number; lon: number; height_m: number };
+    time_utc: string; time_local: string; obs_year_frac: number; tz: string;
+    sun: { alt: number; az: number; dist_au: number };
+    moon: { alt: number; az: number; illum: number; distance_km: number; light_time_s: number };
+    visibility: VisibilityCfg;
+    counts: { city: number; dark: number };
+    stats: { dark_dist_ly_p50: number; dark_dist_ly_p95: number; dark_nodist: number; nodist_shell_ly: number };
+    view: View;
+    warnings: string[];
+    sources: string[];
+  };
+  stars: { fields: string[]; data: [number, number, number, number, number, number, number | null, number | null][] };
+  names: { i: number; name: string }[];
+  labels: number[];
+  constellations: Record<string, [number, number][]>;
+  frames: { icrs_to_enu: number[][]; gal_to_enu: number[][]; ecliptic_pole_enu: number[] };
+  path: { u_cas: number[]; u_target: number[]; closest: { i: number; along_ly: number; miss_ly: number }[] };
+  bodies: Body[];
+  voyager1: { enu_dir: number[]; dist_au: number; source: string };
+  galaxies: Galaxy[];
+  birth: { first_year: number; rows: [number, number, number][] };
+}
+
+/** sky.json + sütun dizileri (CPU hesapları Float64Array ile, SPEC §3.3 eşlik kuralı). */
+export interface Sky extends SkyJson {
+  starAlt: Float64Array;
+  starAz: Float64Array;
+  starMag: Float64Array;
+  starDly: (number | null)[];
+  starName: (i: number) => string | null;
+}
+
+export function prepareSky(json: SkyJson): Sky {
+  const n = json.stars.data.length;
+  const starAlt = new Float64Array(n), starAz = new Float64Array(n), starMag = new Float64Array(n);
+  const starDly: (number | null)[] = new Array(n);
+  json.stars.data.forEach((r, i) => { starAlt[i] = r[0]; starAz[i] = r[1]; starMag[i] = r[2]; starDly[i] = r[6]; });
+  const names = new Map(json.names.map(x => [x.i, x.name]));
+  const starName = (i: number) => {
+    const nm = names.get(i);
+    if (nm) return nm;
+    const hip = json.stars.data[i]?.[7];
+    return hip ? `HIP ${hip}` : null;
+  };
+  return { ...json, starAlt, starAz, starMag, starDly, starName };
+}
+
+/** URL parametreleri (SPEC §2.1). */
+export interface Params {
+  lang: "tr" | "en";
+  az: number | null;
+  debug: boolean;
+  presenter: boolean;
+  autoplay: boolean;
+  z: number | null;
+  born: number | null;
+  explore: boolean;
+}
+
+export function readParams(search = location.search): Params {
+  const q = new URLSearchParams(search);
+  const num = (k: string) => (q.has(k) && Number.isFinite(+q.get(k)!) ? +q.get(k)! : null);
+  return {
+    lang: q.get("lang") === "en" ? "en" : "tr",
+    az: num("az"),
+    debug: q.get("debug") === "1",
+    presenter: q.get("presenter") === "1",
+    autoplay: q.get("autoplay") === "1",
+    z: num("z"),
+    born: num("born"),
+    explore: q.get("explore") === "1",
+  };
+}
+
+export interface Assets {
+  sky: Sky;
+  milkyWay: THREE.Texture;
+  variant: { milkyWay: "4k" | "2k"; earth: "8k" | "4k" };
+}
+
+const BASE = import.meta.env.BASE_URL;
+
+export function chooseVariants(maxTextureSize: number, coarse = matchMedia("(pointer: coarse)").matches) {
+  return {
+    milkyWay: (maxTextureSize >= 4096 && !coarse ? "4k" : "2k") as "4k" | "2k",
+    earth: (maxTextureSize >= 8192 && !coarse ? "8k" : "4k") as "8k" | "4k",
+  };
+}
+
+async function fetchWithProgress(url: string, onBytes: (loaded: number, total: number) => void): Promise<Blob> {
+  const res = await fetch(url);
+  if (!res.ok || !res.body) throw new Error(`${url}: ${res.status}`);
+  const total = +(res.headers.get("content-length") ?? 0);
+  const reader = res.body.getReader();
+  const chunks: BlobPart[] = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    onBytes(loaded, total);
+  }
+  return new Blob(chunks);
+}
+
+/** sky.json, Samanyolu dokusu ve fontları yükler; ilerleme 0..1. */
+export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: number) => void): Promise<Assets> {
+  const variant = chooseVariants(renderer.capabilities.maxTextureSize);
+  const parts = { sky: [0, 900_000], mw: [0, variant.milkyWay === "4k" ? 2_800_000 : 600_000] };
+  const report = () => {
+    const l = parts.sky[0] + parts.mw[0], t = parts.sky[1] + parts.mw[1];
+    onProgress(Math.min(1, l / t));
+  };
+  const skyP = fetchWithProgress(`${BASE}data/sky.json`, (l, t) => { parts.sky = [l, t || parts.sky[1]]; report(); })
+    .then(b => b.text()).then(s => prepareSky(JSON.parse(s) as SkyJson));
+  const mwP = fetchWithProgress(`${BASE}data/milkyway_altaz_${variant.milkyWay}.webp`, (l, t) => { parts.mw = [l, t || parts.mw[1]]; report(); })
+    .then(b => createImageBitmap(b, { imageOrientation: "flipY" }))
+    .then(bmp => {
+      const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+      tex.flipY = false;                         // ImageBitmap zaten çevrildi: v=1 görüntünün üstü
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.generateMipmaps = false;               // az = 0/360° dikişinde çizgi olmasın (SPEC §13.2)
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.needsUpdate = true;
+      return tex;
+    });
+  const [sky, milkyWay] = await Promise.all([skyP, mwP, document.fonts.ready]);
+  onProgress(1);
+  return { sky, milkyWay, variant };
+}

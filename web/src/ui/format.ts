@@ -1,0 +1,46 @@
+export type Lang = "tr" | "en";
+
+const locale = (lang: Lang) => (lang === "tr" ? "tr-TR" : "en-US");
+
+export const fmtInt = (n: number, lang: Lang = "tr") =>
+  new Intl.NumberFormat(locale(lang), { maximumFractionDigits: 0 }).format(Math.round(n));
+
+export const fmtDec = (n: number, d: number, lang: Lang = "tr") =>
+  new Intl.NumberFormat(locale(lang), { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
+
+export const fmtDate = (iso: string, tz: string, lang: Lang = "tr") =>
+  new Intl.DateTimeFormat(locale(lang), { day: "numeric", month: "long", year: "numeric", timeZone: tz }).format(new Date(iso));
+
+export const fmtDayMonth = (iso: string, tz: string, lang: Lang = "tr") =>
+  new Intl.DateTimeFormat(locale(lang), { day: "numeric", month: "long", timeZone: tz }).format(new Date(iso));
+
+export const fmtTime = (iso: string, tz: string, lang: Lang = "tr") =>
+  new Intl.DateTimeFormat(locale(lang), { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: tz }).format(new Date(iso));
+
+/** Gözlem tarihi, verilen saat diliminde bugünle aynı gün mü? (SPEC §6.9 "Bu gece" mi?) */
+export function isTonight(iso: string, tz: string, now = new Date()) {
+  const d = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(x);
+  return d(new Date(iso)) === d(now);
+}
+
+export const upperTr = (s: string, lang: Lang = "tr") => (lang === "tr" ? s.toLocaleUpperCase("tr-TR") : s.toUpperCase());
+
+export function fmtLightTime(s: number, lang: Lang = "tr") {
+  const nf = (n: number, d = 0) =>
+    new Intl.NumberFormat(lang === "tr" ? "tr-TR" : "en-US", { minimumFractionDigits: d, maximumFractionDigits: d }).format(n);
+  const T = lang === "tr"
+    ? { s: ["saniye", "saniye"], m: ["dakika", "dakika"], h: ["saat", "saat"], d: ["gün", "gün"], y: ["yıl", "yıl"] }
+    : { s: ["second", "seconds"], m: ["minute", "minutes"], h: ["hour", "hours"], d: ["day", "days"], y: ["year", "years"] };
+  const w = (u: keyof typeof T, n: number) => T[u][n === 1 ? 0 : 1];
+  const Y = 365.25 * 86400;
+  if (s < 60) { const d = s < 10 ? 2 : 0; const n = +s.toFixed(d); return `${nf(n, d)} ${w("s", n)}`; }
+  if (s < 3600) { const m = Math.floor(s / 60), r = Math.round(s - 60 * m); return r ? `${nf(m)} ${w("m", m)} ${nf(r)} ${w("s", r)}` : `${nf(m)} ${w("m", m)}`; }
+  if (s < 86400 * 0.95) { const h = Math.floor(s / 3600), m = Math.round((s - 3600 * h) / 60); return m ? `${nf(h)} ${w("h", h)} ${nf(m)} ${w("m", m)}` : `${nf(h)} ${w("h", h)}`; }
+  if (s < Y * 0.95) { const d = Math.round(s / 86400); return `${nf(d)} ${w("d", d)}`; }
+  const y = s / Y;
+  if (y < 100) { const n = +y.toFixed(1); return `${nf(n, 1)} ${w("y", n)}`; }
+  if (y < 10000) { const n = Math.round(y); return `${nf(n)} ${w("y", n)}`; }
+  if (y < 1e6) { const n = Math.round(y / 1000) * 1000; return `${nf(n)} ${w("y", n)}`; }
+  const n = +(y / 1e6).toFixed(1);
+  return lang === "tr" ? `${nf(n, 1)} milyon yıl` : `${nf(n, 1)} million years`;
+}
