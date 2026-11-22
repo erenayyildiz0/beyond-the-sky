@@ -314,3 +314,13 @@ button { font: inherit; color: inherit; }
 .pick-link { display: block; width: 100%; text-align: left; border: 0 !important; background: none !important; padding: 4px 0 !important;
   color: #FFE7B0; font: inherit; font-size: var(--size-small); cursor: pointer; }
 @media (max-aspect-ratio: 1/1) { .history-box { top: auto; left: 16px; right: 16px; width: auto; height: 58vh; } }
+.missions { min-width: 280px; max-width: min(380px, 90vw); }
+.mission-row { display: flex; gap: 8px; padding: 7px 8px; font-size: var(--size-small); line-height: 1.35; color: var(--muted); }
+.mission-row.done { color: var(--text); }
+.mission-mark { color: #FFE7B0; }
+.mission-hint { color: var(--muted); font-size: 11px; }
+.mission-toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); width: min(460px, 88vw); padding: 14px 18px; text-align: center;
+  background: rgba(2, 4, 10, .82); border: 1px solid #FFE7B0; border-radius: 14px; backdrop-filter: blur(6px); z-index: 4; }
+.act2 > .mission-toast.on, .act2 > .mission-toast.on * { pointer-events: auto; }
+.mission-done { color: #FFE7B0; font-size: var(--size-small); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
+.mission-note { font-size: calc(var(--size-body) * 1.05); line-height: 1.4; margin-bottom: 10px; }

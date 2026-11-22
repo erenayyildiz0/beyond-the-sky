@@ -52,6 +52,9 @@ import { bvToKelvin } from "../science/stars";
 import { noteFor } from "../content/cards";
 import { eventsFor, type HistoryEvent } from "../content/history";
 import { HistoryBox, historyLine } from "../ui/historyBox";
+import { MissionsUi } from "../ui/missions";
+import { shareFrame } from "../ui/share";
+import { MissionLog, type MissionEvent, type MissionId } from "../science/missions";
 import { JumpMenu, type JumpItem } from "../ui/jumpMenu";
 
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
@@ -397,6 +400,9 @@ export class Act2Flight implements Scene {
   private histEvents: HistoryEvent[] = [];
   private histLookback = 0;
   private histS = 1;
+  private mlog: MissionLog | null = null;
+  private missions: MissionsUi | null = null;
+  private flyTarget: Target | null = null;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
@@ -497,7 +503,7 @@ export class Act2Flight implements Scene {
     home.addEventListener("pointerup", () => {
       const long = this.homeHold != null && performance.now() - this.homeHold > 600;
       this.homeHold = null;
-      if (long) this.goStop(0); else this.lookAt(new THREE.Vector3(), 1.2);        // uzun bas: eve uç
+      if (long) this.goStop(0); else this.lookHome();                             // uzun bas: eve uç
     });
     const sizes = el("button", "fly-small", t("compare.open"), left);
     sizes.addEventListener("click", () => {
@@ -546,6 +552,7 @@ export class Act2Flight implements Scene {
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
     card.onTrace = () => { if (this.selected) this.traceLight(this.selected); };
+    card.onShare = () => { if (this.selected) this.share(this.shareText(this.selected)); };
     this.rayLabel = el("div", "ray-label", undefined, root);
     this.histBox = new HistoryBox(root, import.meta.env.BASE_URL);
     if (this.explore) {
@@ -558,6 +565,14 @@ export class Act2Flight implements Scene {
       this.jump.onPick = k => this.jumpTo(k);
       this.search.onOpen = () => this.jump?.close();
       this.jump.button.addEventListener("click", () => this.search?.close());
+      let store: Storage | null = null;
+      try { store = localStorage; } catch { /* özel mod */ }
+      this.mlog = new MissionLog(store);
+      this.missions = new MissionsUi(this.xhud.bar, root, this.mlog, () => this.birthStarIdx() != null);
+      this.missions.onShare = id => this.share(t("share.mission", { mission: t(`mission.${id}` as "mission.sunGone") }));
+      this.search.onOpen = () => { this.jump?.close(); this.missions?.close(); };
+      this.missions.onOpen = () => { this.jump?.close(); this.search?.close(); };
+      this.jump.button.addEventListener("click", () => this.missions?.close());
       const lines = el("button", "fly-small", `✶ ${t("explore.lines")}`, this.xhud.bar);
       lines.addEventListener("click", () => { this.linesOn = !this.linesOn; lines.classList.toggle("active", this.linesOn); });
     }
@@ -780,7 +795,11 @@ export class Act2Flight implements Scene {
   /** Arama listesi (§6.12): adlar + Andromeda, Üçgen Gökadası, Ülker, Güneş, Voyager 1 */
   private searchEntries(): SearchEntry[] {
     const sky = this.ctx.assets.sky;
-    const out: SearchEntry[] = sky.names.map(n => ({ key: `star:${n.i}`, name: n.name, mag: sky.starMag[n.i] }));
+    const count = new Map<string, number>();
+    for (const n of sky.names) count.set(n.name, (count.get(n.name) ?? 0) + 1);
+    // Aynı adı taşıyan bileşenler (ör. 61 Cyg A ve B) HIP numarasıyla ayrılır
+    const out: SearchEntry[] = sky.names.map(n => ({ key: `star:${n.i}`, mag: sky.starMag[n.i],
+      name: count.get(n.name)! > 1 && sky.stars.data[n.i][7] ? `${n.name} · HIP ${sky.stars.data[n.i][7]}` : n.name }));
     const alc = sky.stars.data.findIndex(r => r[7] === 17702);
     if (alc >= 0) out.push({ key: `star:${alc}`, name: getLang() === "tr" ? "Ülker" : "Pleiades", mag: -2 });
     for (const k of ["m31", "m33", "sun", "voyager"]) {
@@ -798,6 +817,7 @@ export class Act2Flight implements Scene {
     this.lookAt(tg.posKm, 1.2);
     this.ui.card.open(this.cardInfo(tg));
     if (tg.kind === "star" && tg.dly != null) this.traceLight(tg);
+    this.cardMission(tg);
   }
 
   /** Yıldız kartı (SPEC §3.16): hepsi veriden; uzak yıldızlarda "~" ve 2 anlamlı basamak */
@@ -837,8 +857,49 @@ export class Act2Flight implements Scene {
       links: hist.length ? [{ text: `${t("history.kicker")}: ${historyLine(hist[0], lang)}`, onClick: () => this.openHistory(hist, dly!) }] : undefined,
       title: tg.name, subtitle: det ? conName(det.con[i], lang) : undefined, lines, fly: dly != null ? "here" : null,
       note: note ? { text: lang === "tr" ? note.tr : note.en, sources: note.sources } : undefined,
-      footer: t("card.footer"), trace: dly != null,
+      footer: t("card.footer"), trace: dly != null, share: this.explore,
     };
+  }
+
+  /** Eve bak: kamerayı Güneş'e çevir (görevler 5 ve 6: Sirius'ta ve Andromeda'da) */
+  private lookHome() {
+    this.lookAt(new THREE.Vector3(), 1.2);
+    const ns = this.nearStar, sky = this.ctx.assets.sky;
+    const nearHip = ns.i >= 0 && ns.dLy < 1 ? sky.stars.data[ns.i][7] : null;
+    const m31 = this.w.bodies.find(b => b.key === "m31");
+    const atM31 = !!m31 && this.C.distanceTo(m31.posKm) < 0.15 * m31.posKm.length();
+    this.mission({ type: "lookHome", nearHip, atM31 });
+  }
+
+  private birthStarIdx() {
+    const b = this.ctx.shared.birth;
+    return b && (b.kind === "match" || b.kind === "nearest") ? b.star : null;
+  }
+
+  private mission(ev: MissionEvent) {
+    if (!this.mlog || !this.missions || this.phase !== "free") return;
+    const fresh: MissionId[] = this.mlog.report(ev, { obsYear: this.ctx.assets.sky.meta.obs_year_frac, birthStar: this.birthStarIdx() });
+    for (const id of fresh) { this.ctx.audio?.chime(); this.missions.announce(id); }
+  }
+
+  private cardMission(tg: Target) {
+    if (tg.kind !== "star") return;
+    const i = +tg.key.slice(5), sky = this.ctx.assets.sky;
+    this.mission({ type: "card", mag: sky.starMag[i], dly: sky.starDly[i] });
+  }
+
+  /** Paylaş metni: doğum yıldızı yalnızca kullanıcı kendi kartından paylaşırsa metne girer (§2.6) */
+  private shareText(tg: Target) {
+    if (tg.kind !== "star" || tg.dly == null) return tg.name;
+    const ll = lightLeft(tg.dly, this.ctx.assets.sky.meta.obs_year_frac);
+    const yrTr = (ll.approx ? "~" : "") + (ll.bc != null ? `MÖ ${trLocative(ll.bc)}` : trLocative(ll.year));
+    const yrEn = (ll.approx ? "~" : "") + (ll.bc != null ? `${ll.bc} BC` : String(ll.year));
+    const mine = +tg.key.slice(5) === this.birthStarIdx();
+    return t(mine ? "share.birth" : "share.star", { name: tg.name, yıl_de: yrTr, year: yrEn });
+  }
+
+  private share(text: string) {
+    shareFrame(this.ctx.renderer.domElement, () => this.render(this.ctx.renderer), text).catch(e => console.warn(e));
   }
 
   private openHistory(events: HistoryEvent[], lookback: number) {
@@ -906,6 +967,7 @@ export class Act2Flight implements Scene {
     const end = plan.at(1);
     this.plan = { t: 0, turnS: 0.8, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(tg.posKm.clone().sub(this.C), this.C) };
     this.planEndLook = { pos: end, target: tg.posKm };
+    this.flyTarget = tg;
     this.stopIdx = -1;
     this.ascentAuto = false;
   }
@@ -918,6 +980,7 @@ export class Act2Flight implements Scene {
     const plan = pointPlan(this.C, s.pos);
     this.plan = { t: 0, turnS: 0, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(s.look, s.pos), stopIdx: i };
     this.planEndLook = null;
+    this.flyTarget = null;
     this.ascentAuto = false;
   }
 
@@ -932,7 +995,7 @@ export class Act2Flight implements Scene {
       if (!atStop) for (let k = this.w.stops.length - 1; k >= 0; k--) if (this.w.stops[k].z < z - 0.02) { i = k; break; }
       if (i >= 0) this.goStop(i);
     } else if (a === "lookBack") {
-      this.lookAt(new THREE.Vector3(), 1.2);
+      this.lookHome();
     }
   }
 
@@ -1065,7 +1128,16 @@ export class Act2Flight implements Scene {
         this.q.copy(this.quatFor(this.planEndLook.target.clone().sub(this.C)));
       }
       this.ori.setFromQuaternion(this.q);
-      if (s >= 1) { if (p.stopIdx != null) this.stopIdx = p.stopIdx; this.plan = null; this.v = 0; this.moved = true; }
+      if (s >= 1) {
+        if (p.stopIdx != null) this.stopIdx = p.stopIdx;
+        this.plan = null; this.v = 0; this.moved = true;
+        const tg = this.flyTarget;
+        if (tg && this.planEndLook) {                                    // Buraya uç: varış (görevler 4 ve 7)
+          const i = tg.kind === "star" ? +tg.key.slice(5) : null;
+          this.mission({ type: "arrive", star: i, hip: i != null ? this.ctx.assets.sky.stars.data[i][7] : null });
+        }
+        this.flyTarget = null;
+      }
     } else {
       this.q.copy(p.q0).slerp(p.q1, turn);
       this.ori.setFromQuaternion(this.q);
@@ -1160,6 +1232,7 @@ export class Act2Flight implements Scene {
       this.histS = 0;
       const lb = Dmly > 100 ? Math.min(lightTravelGyr(Dmly), AGE_GYR) * 1e9 : D / LY_KM;
       this.histLookback = lb;
+      this.mission({ type: "pos", homeLy: D / LY_KM });
       this.histEvents = this.phase === "return" ? [] : eventsFor(lb, this.ctx.assets.sky.meta.obs_year_frac);
       const e = this.histEvents[0];
       if (e) this.histLine.textContent = `${t("history.now")}: ${historyLine(e, lang)} ›`;
@@ -1300,6 +1373,7 @@ export class Act2Flight implements Scene {
     this.selected = chosen.tg;
     this.ui.card.open(this.cardInfo(chosen.tg));
     if (chosen.tg.kind === "star" && chosen.tg.dly != null) this.traceLight(chosen.tg);     // §6.5.6: aynı anda ışık çizgisi
+    this.cardMission(chosen.tg);
   }
 
   private screenRadius(posKm: THREE.Vector3, rKm: number, fovDeg: number) {

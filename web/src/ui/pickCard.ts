@@ -8,6 +8,8 @@ export interface PickInfo {
   footer?: string;
   /** "Işığını izle" düğmesi (uzaklığı bilinen yıldızlar) */
   trace?: boolean;
+  /** Paylaş düğmesi (Keşif) */
+  share?: boolean;
   /** Dokunulabilir satırlar (ör. tarih çapası: "Işığı yola çıktığında: …") */
   links?: { text: string; onClick: () => void }[];
 }
@@ -23,8 +25,10 @@ export class PickCard {
   private foot: HTMLElement;
   private fly: HTMLButtonElement;
   private trace: HTMLButtonElement;
+  private shareBtn: HTMLButtonElement;
   onFly: () => void = () => {};
   onTrace: () => void = () => {};
+  onShare: () => void = () => {};
   onClose: () => void = () => {};
 
   constructor(parent: HTMLElement) {
@@ -38,9 +42,11 @@ export class PickCard {
     const row = el("div", "pick-actions", undefined, this.root);
     this.fly = el("button", "pick-fly", t("card.flyHere"), row);
     this.trace = el("button", "", t("card.traceLight"), row);
+    this.shareBtn = el("button", "", t("card.share"), row);
     const close = el("button", "pick-close", t("card.close"), row);
     this.fly.addEventListener("click", () => { this.hide(); this.onFly(); });
     this.trace.addEventListener("click", () => this.onTrace());
+    this.shareBtn.addEventListener("click", () => this.onShare());
     close.addEventListener("click", () => { this.hide(); this.onClose(); });
     this.root.addEventListener("pointerdown", e => e.stopPropagation());
   }
@@ -74,6 +80,7 @@ export class PickCard {
     this.fly.textContent = info.fly === "home" ? t("card.goHome") : t("card.flyHere");
     this.fly.style.display = info.fly ? "" : "none";
     this.trace.style.display = info.trace ? "" : "none";
+    this.shareBtn.style.display = info.share ? "" : "none";
     show(this.root);
   }
   hide() { show(this.root, false); }

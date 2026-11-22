@@ -45,6 +45,8 @@ export class SciencePanel {
     cb.type = "checkbox"; cb.checked = ctx.tune.showNames;
     cb.addEventListener("change", () => { ctx.tune.showNames = cb.checked; });
     el("span", "", "İsimleri göster", names);
+    const reset = el("button", "science-copy", "Görevleri sıfırla", this.root);     // SPEC §6.12 (sayfa yenilenince)
+    reset.addEventListener("click", () => { try { localStorage.removeItem("bts.missions"); reset.textContent = "Sıfırlandı (yenile)"; } catch { /* özel mod */ } });
     const copy = el("button", "science-copy", "Değerleri kopyala", this.root);
     copy.addEventListener("click", async () => {
       const json = JSON.stringify(ctx.tune, null, 2);
