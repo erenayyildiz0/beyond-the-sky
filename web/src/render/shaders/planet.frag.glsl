@@ -42,10 +42,11 @@ void main() {
   vec3 N = normalize(vN);
   vec3 L = normalize(uSunPos - vWorld);
   vec3 V = normalize(cameraPosition - vWorld);
-  float mu0 = max(dot(N, L), 0.0), mu = max(dot(N, V), 1e-3);
+  // mu tabanı: k < 1 Minnaert ve Lommel–Seeliger kenarda ıraksar (en dış piksellerde parlak şerit olmasın)
+  float mu0 = max(dot(N, L), 0.0), mu = max(dot(N, V), 0.05);
   float l = uMinnaert > 0.0 ? pow(mu0, uMinnaert) * pow(mu, uMinnaert - 1.0)
                             : 2.0 * mu0 / (mu0 + mu);           // Lommel–Seeliger (tam evrede 1)
-  l = min(l, 1.6);
+  l = min(l, 1.3);
   // Satürn: halkaların gezegen üstüne düşen gölgesi
   if (uRingIn > 0.0) {
     float t = -dot(vWorld - uCenter, uRingN) / dot(L, uRingN);

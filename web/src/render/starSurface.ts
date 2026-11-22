@@ -20,36 +20,41 @@ export function starLook(T: number, rSun: number) {
   const cool = 1 - THREE.MathUtils.smoothstep(T, 6800, 9000);
   // Devlerde sıcak beyaz korona yerine soğuk, genişlemiş gaz zarfı (kızıl, sönük); çıkıntılar Güneş benzeri yıldızlarda
   const giant = THREE.MathUtils.smoothstep(rSun, 5, 30);
+  // Kromosfer ve çıkıntılar dış konveksiyon bölgesinden beslenir; A/B yıldızlarında (Sirius, Vega, Rigel) yok denecek kadar zayıf
   return {
+    cool,
     cells: THREE.MathUtils.clamp(700 * rSun ** -0.75, 3, 3000),
     contrast: 0.35 + 0.65 * cool,
     corona: (0.35 + 0.65 * cool) * (1 - 0.75 * giant),
-    prom: (0.15 + 0.85 * cool) * (1 - giant),
+    prom: cool * (1 - giant),
     spots: T > 3000 && T < 6500,
   };
 }
 
-export function createStarSurfaceMaterial(gain = 1) {
+export function createStarSurfaceMaterial(gain = 1.15) {
   const spots = Array.from({ length: 6 }, () => new THREE.Vector4());
   return new THREE.ShaderMaterial({
     vertexShader: vert, fragmentShader: frag,
     uniforms: {
-      uColor: { value: new THREE.Color(1, 1, 1) }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uOpacity: { value: 1 }, uTime: STAR_TIME, uGain: { value: gain },
+      uColor: { value: new THREE.Color(1, 1, 1) }, uTint: { value: new THREE.Vector3(1, 1, 1) }, uOpacity: { value: 1 }, uTime: STAR_TIME, uGain: { value: gain }, uCool: { value: 1 },
       uCells: { value: 700 }, uContrast: { value: 1 }, uSpots: { value: spots },
     },
   });
 }
 
-/** Yüzey ve çevre malzemelerini yıldıza göre ayarla; seed lekelerin ve çıkıntıların yerini belirler. */
 /**
- * Görüntü tonu (sıcaklığa göre): filtreli yıldız/güneş fotoğraflarındaki gibi doygun. Soğuk ve Güneş benzeri yıldızlar
- * altın-turuncu, sıcaklar mavi. Gerçekte 5.000–7.000 K yıldızlar gözle beyaza yakındır (renk için kelvinToRgb gerçek).
+ * Görüntü tonu (sıcaklığa göre): filtreli yıldız/güneş fotoğraflarındaki gibi. Güneş benzeri yıldızlar altın sarısı, sıcaklar
+ * hafif mavi. Soğuk yıldızlar (K/M) zaten turuncu-kızıl: ton eklenmez, yoksa bakır renkli "lav"a döner. Gerçekte 5.000–7.000 K
+ * yıldızlar gözle beyaza yakındır (renk için kelvinToRgb gerçek).
  */
 export function starTint(T: number): [number, number, number] {
-  const warm = 1 - THREE.MathUtils.smoothstep(T, 6000, 8000), hot = THREE.MathUtils.smoothstep(T, 8000, 11000);
-  const mid: [number, number, number] = [1.0, 0.92, 0.8];
-  return [0, 1, 2].map(k => mid[k] + (SUN_TINT[k] - mid[k]) * warm + ([0.78, 0.88, 1.0][k] - mid[k]) * hot) as [number, number, number];
+  const S = THREE.MathUtils.smoothstep;
+  const warm = S(T, 3800, 5000) * (1 - S(T, 6000, 8000)), hot = S(T, 8000, 11000);
+  const mid: [number, number, number] = [1.0, 0.95, 0.88];
+  return [0, 1, 2].map(k => mid[k] + (SUN_TINT[k] - mid[k]) * warm + ([0.88, 0.94, 1.0][k] - mid[k]) * hot) as [number, number, number];
 }
+
+/** Yüzey ve çevre malzemelerini yıldıza göre ayarla; seed lekelerin ve çıkıntıların yerini belirler. */
 
 export function applyStarLook(surface: THREE.ShaderMaterial, corona: THREE.ShaderMaterial | null, color: THREE.Color, T: number, rSun: number, seed: number) {
   const look = starLook(T, rSun);
@@ -58,6 +63,7 @@ export function applyStarLook(surface: THREE.ShaderMaterial, corona: THREE.Shade
   surface.uniforms.uTint.value.set(...starTint(T));
   surface.uniforms.uCells.value = look.cells;
   surface.uniforms.uContrast.value = look.contrast;
+  surface.uniforms.uCool.value = look.cool;
   // Lekeler etkin enlemlerde (±8–30°); boyut 10.000–40.000 km (Güneş ölçeğinde)
   const n = look.spots ? 3 + Math.floor(rnd() * 4) : 0;
   (surface.uniforms.uSpots.value as THREE.Vector4[]).forEach((s, i) => {

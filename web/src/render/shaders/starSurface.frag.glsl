@@ -2,6 +2,7 @@
 // Temsili: granülasyon (Güneş'te ~1.000 km'lik hücreler, ~8 dakikada yenilenir), süpergranül ağı, fakülalar ve lekeler.
 uniform vec3 uColor, uTint; // uTint: görüntü tonu (Güneş'te filtreli fotoğraf sarısı, diğerlerinde 1)
 uniform float uOpacity, uTime, uGain;
+uniform float uCool;        // 1 soğuk/Güneş benzeri (dış konveksiyon, kızaran kenar), 0 sıcak yıldız
 uniform float uCells;       // yarıçap başına granül sayısı (devlerde birkaç dev hücre)
 uniform float uContrast;    // granül kontrastı (sıcak yıldızlarda konveksiyon zayıf)
 uniform vec4 uSpots[6];     // leke merkezi (yerel birim vektör) + yarıçap (radyan); w = 0 → yok
@@ -43,25 +44,30 @@ void main() {
 
   // Granülasyon: parlak sıcak hücre merkezleri, aralarında koyu, soğuk iniş şeritleri
   vec3 q = p * uCells;
-  float px = length(fwidth(q));                                  // bir pikselde kaç hücre
-  float vis = 1.0 - smoothstep(0.3, 0.9, px);                    // piksel altına inince ortalamaya karış (titreşmesin)
+  float pPx = length(fwidth(p));                                 // birim kürede bir pikselin ayak izi
+  float px = pPx * uCells;                                       // bir pikselde kaç hücre
+  // Bükülme ve ince şeritler hücreden ~4 kat sık: hücre piksele inmeden ortalamaya karış (uzaktan kumlanmasın)
+  float vis = 1.0 - smoothstep(0.08, 0.3, px);
   float g = 1.0;
   if (vis > 0.0) {
     // Kenarlar düz çokgen olmasın: koordinatı yumuşak gürültüyle bük (granüller yuvarlak, şeritler kıvrımlı)
     vec3 warp = vec3(noise(q * 0.7), noise(q * 0.7 + 17.3), noise(q * 0.7 + 41.1)) - 0.5;
     float giant = 1.0 - smoothstep(4.0, 40.0, uCells);           // süperdevlerde birkaç dev, lekeli hücre
-    vec3 qw = q + warp * (0.9 + 1.6 * giant);
+    vec3 qw = q + warp * (0.9 + 0.7 * giant);
     vec2 w = worley(qw, uTime * 0.04);
     float dome = 1.0 - w.x * w.x * 1.1;                          // ortası parlak kubbe
     float lane = smoothstep(0.0, 0.25 + 0.5 * giant, w.y - w.x); // geniş, yumuşak koyu şerit
-    dome *= mix(1.0, 0.6 + 0.8 * fbm(q * 2.5 + 7.0), giant);
-    float gran = (0.5 + 0.5 * dome) * mix(0.3, 1.0, lane);
-    g = mix(1.0, gran * 1.45, uContrast * vis);                  // ortalama parlaklık korunur
+    float fbmVis = 1.0 - smoothstep(0.03, 0.12, px);             // fbm hücreden ~20 kat ince
+    dome *= mix(1.0, 0.75 + 0.5 * mix(0.5, fbm(q * 2.5 + 7.0), fbmVis), giant);
+    float gran = (0.65 + 0.35 * dome) * mix(0.5 + 0.25 * giant, 1.0, lane);   // devde lekeli hücreler, ince damar ağı değil
+    g = mix(1.0, gran * 1.3, uContrast * vis);                   // ortalama parlaklık korunur
   }
   // Süpergranül ağı (~30.000 km) ve kenara yakın parlak fakülalar
-  float net = noise(p * max(uCells * 0.035, 2.0) + uTime * 0.001);
-  float sg = 1.0 + 0.14 * uContrast * (net - 0.5);              // uzaktan da seçilen ağ dokusu
-  float fac = 1.0 + 0.3 * uContrast * pow(1.0 - mu, 2.0) * smoothstep(0.6, 0.75, net);
+  float netF = max(uCells * 0.035, 2.0);
+  float netVis = 1.0 - smoothstep(0.1, 0.35, pPx * netF);
+  float net = noise(p * netF + uTime * 0.001);
+  float sg = 1.0 + 0.12 * uContrast * netVis * (net - 0.5);     // uzaktan da seçilen ağ dokusu
+  float fac = 1.0 + 0.25 * uContrast * netVis * pow(1.0 - mu, 2.0) * smoothstep(0.6, 0.75, net);
 
   // Lekeler: koyu gölge (umbra), ışınsal lifli yarı gölge (penumbra)
   float spot = 1.0;
@@ -72,19 +78,21 @@ void main() {
     if (d > 2.6) continue;
     vec3 t1 = normalize(cross(s.xyz, abs(s.y) < 0.9 ? vec3(0, 1, 0) : vec3(1, 0, 0)));
     float ang = atan(dot(p, cross(s.xyz, t1)), dot(p, t1));
-    float fil = 0.75 + 0.25 * noise(vec3(cos(ang) * 30.0, sin(ang) * 30.0, d * 3.0));
+    float filVis = 1.0 - smoothstep(0.1, 0.35, pPx / s.w * 30.0);    // lif aralığı piksele inince ortalama
+    float fil = 0.75 + 0.25 * mix(0.5, noise(vec3(cos(ang) * 30.0, sin(ang) * 30.0, d * 3.0)), filVis);
     float pen = 1.0 - smoothstep(1.7, 2.4, d * (0.9 + 0.2 * fil));
     float umb = 1.0 - smoothstep(0.75, 1.0, d);
     spot *= mix(1.0, mix(0.72 * fil, 0.22, umb), pen);
   }
 
-  // Kenar kararması dalga boyuna bağlı: mavi daha çok kararır → kenar kırmızılaşır. Doygunluk artırıldı (filtreli
-  // güneş fotoğraflarındaki gibi; gerçekte Güneş'in rengi beyaza yakın)
-  vec3 sat = mix(vec3(dot(uColor, vec3(0.299, 0.587, 0.114))), uColor, 1.8);
+  // Kenar kararması dalga boyuna bağlı: mavi daha çok kararır → kenar kırmızılaşır (sıcak yıldızda zayıf). Doygunluk biraz
+  // artırıldı (filtreli güneş fotoğraflarındaki gibi; gerçekte Güneş'in rengi beyaza yakın)
+  vec3 sat = mix(vec3(dot(uColor, vec3(0.299, 0.587, 0.114))), uColor, mix(1.1, 1.4, uCool));   // sıcak yıldız beyaza yakın
   sat = clamp(sat * uTint, 0.0, 1.0);
-  vec3 base = mix(sat * vec3(0.95, 0.55, 0.3), sat, smoothstep(0.0, 0.7, mu));
+  vec3 limb = mix(vec3(0.95, 0.85, 0.8), vec3(0.95, 0.6, 0.38), uCool);
+  vec3 base = mix(sat * limb, sat, smoothstep(0.0, 0.7, mu));
   float dark = g * spot;
-  vec3 cool = mix(vec3(1.0, 0.62, 0.4), vec3(1.0), smoothstep(0.25, 1.0, dark));   // soğuk (koyu) bölgeler kızıla kayar
+  vec3 cool = mix(vec3(1.0, 0.75, 0.58), vec3(1.0), smoothstep(0.25, 1.0, dark));   // soğuk (koyu) bölgeler kızıla kayar
   vec3 col = base * cool * I * g * sg * fac * spot * uGain;
   gl_FragColor = vec4(col * uOpacity, 1.0);
   #include <colorspace_fragment>

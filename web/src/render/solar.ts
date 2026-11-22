@@ -56,7 +56,7 @@ export function createSolarLayer(sky: Sky) {
 
   // Gerçek boyutlu küreler (yanlarına uçulabilsin diye): Güneş (granüllü fotosfer + korona, R1) ve gezegenler
   const sunR = SUN_RADIUS_KM / AU_KM;
-  const sunMat = createStarSurfaceMaterial(1.0);
+  const sunMat = createStarSurfaceMaterial();
   const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(sunR, 128, 64), sunMat);
   sunMesh.position.copy(sunPos);
   const sp = sky.realism.poles_enu.sun;

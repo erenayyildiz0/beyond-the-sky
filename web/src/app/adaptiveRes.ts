@@ -1,6 +1,8 @@
 /**
  * Uyarlamalı çözünürlük: kareler bir süre yavaş kalırsa piksel oranını düşürür, rahatlayınca geri çıkarır.
  * Zayıf ekran kartında (ör. dahili GPU) kasmayı önler; yıldız/nokta boyutları piksel oranıyla ölçeklendiği için görünüm değişmez.
+ * Taban 1: ekranın kendi pikselinin altına inilmez (1x ekranda 0,6'ya inince dokular ve yıldızlar bulanık, kenarlar basamaklı
+ * oluyordu); düşürme yalnızca yüksek yoğunluklu ekranlarda (2x telefon, Retina) çalışır.
  */
 export class AdaptiveRes {
   pr: number;
@@ -8,7 +10,7 @@ export class AdaptiveRes {
   private slow = 0;
   private fast = 0;
   private sinceRaise = Infinity;
-  constructor(public max: number, public min = Math.max(0.6, max * 0.5)) { this.pr = max; }
+  constructor(public max: number, public min = Math.min(max, 1)) { this.pr = max; }
 
   /** dt: kare süresi (sn). Oran değiştiyse yeni değeri, yoksa null döner. */
   step(dt: number): number | null {

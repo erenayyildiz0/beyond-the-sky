@@ -8,7 +8,7 @@ import { applyStarLook, createCorona, createStarSurfaceMaterial } from "./starSu
  */
 export function createStarBodyLayer() {
   const scene = new THREE.Scene();
-  const mat = createStarSurfaceMaterial(1.0);
+  const mat = createStarSurfaceMaterial();
   const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 128, 64), mat);
   const corona = createCorona(new THREE.Vector3(), 1);
   const glow = createMarkers([{ pos: new THREE.Vector3(), size: 26, color: "#ffffff" }], 1);

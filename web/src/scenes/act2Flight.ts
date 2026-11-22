@@ -178,7 +178,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     const particles = createGalaxyParticles(f, count, { sunLocal, nearR: radiusLy, spiral, radiusK: spiral ? radiusLy : radiusLy * 0.5 });
     particles.obj.renderOrder = 3;
     deep.scene.add(layered.group, particles.obj);
-    loadDataTexture(r, `galaxy_${key}.webp`, { srgb: false }).then(tx => { tx.wrapS = tx.wrapT = THREE.ClampToEdgeWrapping; layered.setMap(tx); }).catch(e => console.warn(e));
+    loadDataTexture(r, `galaxy_${key}.webp`, { srgb: false, clamp: true }).then(tx => layered.setMap(tx)).catch(e => console.warn(e));
     galaxies.push({ key, layered, particles, local });
   };
   const mwCenter = gx.clone().multiplyScalar(26_700);                 // GRAVITY 2019 (§3.13)

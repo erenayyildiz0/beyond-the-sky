@@ -39,11 +39,11 @@ void main() {
 
   // Korona: akıntılar ekvatorda uzun ve parlak, kutuplarda ince ışınsal tüyler
   float stream = fbm(vec3(cs * 2.5, uTime * 0.0015 + 1.3));
-  float rays = noise(vec3(cs * 55.0, h * 0.6));
+  float rays = noise(vec3(cs * 28.0, h * 0.6));
   float reach = 1.0 + 2.2 * eq * smoothstep(0.35, 0.75, stream);           // akıntılar dışarı uzanır
   float re = 1.0 + h / reach;
   float bau = (0.0532 * pow(re, -2.5) + 1.425 * pow(re, -7.0) + 2.565 * pow(re, -17.0)) / 4.0425;
-  float Ic = pow(bau, 0.38) * (0.55 + 0.45 * eq) * (0.75 + 0.5 * rays) * (1.0 - smoothstep(3.2, 4.5, r));
+  float Ic = pow(bau, 0.38) * (0.55 + 0.45 * eq) * (0.8 + 0.4 * rays) * (1.0 - smoothstep(3.2, 4.5, r));
   vec3 coronaCol = mix(vec3(1.0, 0.97, 0.93), uColor, 0.35);
 
   // Kromosfer: ince kırmızı katman, dikenli (spikül) üst kenar

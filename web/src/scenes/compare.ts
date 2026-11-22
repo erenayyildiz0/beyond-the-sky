@@ -128,7 +128,7 @@ export class Compare implements Scene {
     }
     if ("star" in it.look) {
       const [r, g, b] = kelvinToRgb(it.look.star);
-      mat = createStarSurfaceMaterial(1.0);
+      mat = createStarSurfaceMaterial();
       applyStarLook(mat, null, new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace), it.look.star, it.rKm / SUN_RADIUS_KM, x + 1);
     } else {
       const look = it.look;

@@ -162,7 +162,6 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: 
 
 const texCache = new Map<string, Promise<THREE.Texture>>();
 
-/** public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). */
 const uploads: { r: THREE.WebGLRenderer; tex: THREE.Texture; done: (t: THREE.Texture) => void }[] = [];
 /** Dokuyu ekran kartına önceden gönder; büyük dokular aynı karede yığılmasın diye karede bir tane. */
 function queueUpload(r: THREE.WebGLRenderer, tex: THREE.Texture): Promise<THREE.Texture> {
@@ -179,7 +178,11 @@ function drainUploads() {
   if (uploads.length) requestAnimationFrame(drainUploads);
 }
 
-export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: { srgb?: boolean } = {}): Promise<THREE.Texture> {
+/**
+ * public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). Sarma gibi ayarlar burada verilir:
+ * doku ekran kartına gönderildikten sonra değiştirilirse needsUpdate olmadan uygulanmaz.
+ */
+export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: { srgb?: boolean; clamp?: boolean } = {}): Promise<THREE.Texture> {
   const hit = texCache.get(file);
   if (hit) return hit;
   const p = fetch(`${BASE}data/${file}`)
@@ -191,7 +194,7 @@ export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opt
       tex.flipY = false;
       tex.colorSpace = opts.srgb === false ? THREE.NoColorSpace : THREE.SRGBColorSpace;
       tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapS = opts.clamp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
       tex.needsUpdate = true;
       return queueUpload(renderer, tex);         // ilk göründüğü karede takılmasın
     });
