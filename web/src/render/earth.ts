@@ -74,13 +74,12 @@ export function createEarthLayer(sky: Sky) {
     unitKm: EARTH_RADIUS_KM,
     originKm: new THREE.Vector3(0, -ankaraRadiusKm(m.location.height_m), 0),
     moonPos,
-    setNightTexture(t: THREE.Texture) { earthMat.uniforms.uNight.value = t; },
-    setDayTexture(t: THREE.Texture) { earthMat.uniforms.uDay.value = t; earthMat.uniforms.uHasDay.value = 1; },
-    setPatchTexture(t: THREE.Texture) {
-      t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; t.needsUpdate = true;
-      earthMat.uniforms.uPatch.value = t; earthMat.uniforms.uHasPatch.value = 1;
-    },
-    setMoonTexture(t: THREE.Texture) { moonMat.uniforms.uMap.value = t; moonMat.uniforms.uHasMap.value = 1; },
+    // null: doku ekran kartından bırakıldı (uzaklaşınca, telefon belleği)
+    setNightTexture(t: THREE.Texture | null) { earthMat.uniforms.uNight.value = t ?? blank; },
+    setDayTexture(t: THREE.Texture | null) { earthMat.uniforms.uDay.value = t ?? blank; earthMat.uniforms.uHasDay.value = t ? 1 : 0; },
+    /** Karo kenarda kesilmeli: yükleyen ClampToEdge ile yükler (doku gönderildikten sonra ayarı değişmez) */
+    setPatchTexture(t: THREE.Texture | null) { earthMat.uniforms.uPatch.value = t ?? blank; earthMat.uniforms.uHasPatch.value = t ? 1 : 0; },
+    setMoonTexture(t: THREE.Texture | null) { moonMat.uniforms.uMap.value = t ?? blank; moonMat.uniforms.uHasMap.value = t ? 1 : 0; },
     applyWeight(w: number) {
       earthMat.uniforms.uOpacity.value = w;
       atmoMat.uniforms.uOpacity.value = w;

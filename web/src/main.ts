@@ -1,4 +1,5 @@
 import "./styles.css";
+import "./app/install";                         // yükleme önerisi erken gelir: dinleyici hemen kurulsun
 import { loadAssets, readParams } from "./app/assets";
 import { Director, type AppContext, type Tunables } from "./app/director";
 import { Input } from "./app/input";
@@ -128,3 +129,7 @@ async function main() {
 }
 
 main();
+
+// PWA (çevrimdışı açılış, ana ekrana ekleme): yalnızca derlenmiş sürümde; geliştirmede önbellek eski kodu göstermesin
+if (import.meta.env.PROD && "serviceWorker" in navigator)
+  addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(e => console.warn(e)));

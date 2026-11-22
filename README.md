@@ -43,7 +43,11 @@ sharing. The **Sizes** screen puts objects side by side at true scale, from a pu
 - Turkish and English interface.
 - Terms such as magnitude, light-year or Sgr A* are underlined with dots; tap for a plain-language explanation.
 - Reduced-motion support, adaptive resolution and presentation-remote support.
-- No external network requests at runtime; it works offline.
+- Installable app (PWA): "Install as an app" on Android and desktop, "Add to Home Screen" on iPhone. Once opened, it starts
+  offline; the data you've already seen is kept on the device.
+- Phone-friendly memory use: Earth, Moon, planet and CMB textures are loaded only when you get close to them and released
+  when you fly away.
+- No external network requests at runtime.
 
 ## How it works
 
@@ -87,6 +91,8 @@ beyond-the-sky/
 │   │   └── i18n/        # Turkish and English strings
 │   ├── public/data/     # pipeline output
 │   └── tests/
+├── web/pwa/sw.js        # service worker template (filled in at build time)
+├── pipeline/make_icons.py  # generates the app icons in web/public/icons/
 ├── docs/                # design document, extras, demo script
 └── .github/workflows/   # GitHub Pages deployment
 ```
@@ -128,6 +134,10 @@ If the Black Marble night image can't be downloaded, `build.py` tells you where 
 
 On every push to `main`, [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the app and
 deploys it to GitHub Pages. In the repository settings, **Settings → Pages → Source** must be set to **GitHub Actions**.
+
+The build also writes `dist/sw.js`, the service worker. Its cache versions are derived from file contents, so users only
+re-download the data when the data actually changes. The service worker is registered only in production builds, never in
+`npm run dev`.
 
 ## Usage
 

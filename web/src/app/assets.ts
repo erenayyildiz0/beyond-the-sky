@@ -188,7 +188,11 @@ export async function loadRelocationData(variant: "4k" | "2k") {
   return { icrs: icrs.data, milkyWay: tex };
 }
 
-const texCache = new Map<string, Promise<THREE.Texture>>();
+type TexOpts = { srgb?: boolean; clamp?: boolean };
+/** refs: dokuyu kullanan yer sayısı; sıfıra inince ekran kartından silinir (releaseDataTexture) */
+const texCache = new Map<string, { p: Promise<THREE.Texture>; refs: number }>();
+/** Ekran kartındaki dokular: WebGL bağlamı geri gelince görüntüleri dosyadan yeniden çözülür */
+const live = new Map<string, THREE.Texture>();
 
 const uploads: { r: THREE.WebGLRenderer; tex: THREE.Texture; done: (t: THREE.Texture) => void }[] = [];
 /** Dokuyu ekran kartına önceden gönder; büyük dokular aynı karede yığılmasın diye karede bir tane. */
@@ -202,51 +206,88 @@ function drainUploads() {
   const u = uploads.shift();
   if (!u) return;
   u.r.initTexture(u.tex);
+  // Ekran kartına kopyalandı: çözülmüş görüntü bellekte ikinci kez durmasın (telefonda ekran kartı ve RAM aynı bellek).
+  // Bundan sonra dokunun ayarı needsUpdate ile değiştirilmemeli; bağlam kaybında görüntü reviveTextures ile geri gelir.
+  if (u.tex.userData.closeAfterUpload) (u.tex.image as ImageBitmap).close();
   u.done(u.tex);
   if (uploads.length) requestAnimationFrame(drainUploads);
 }
 
-/**
- * public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). Sarma gibi ayarlar burada verilir:
- * doku ekran kartına gönderildikten sonra değiştirilirse needsUpdate olmadan uygulanmaz.
- */
-export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: { srgb?: boolean; clamp?: boolean } = {}): Promise<THREE.Texture> {
-  const hit = texCache.get(file);
-  if (hit) return hit;
-  const p = fetch(`${BASE}data/${file}`)
+function decode(file: string) {
+  return fetch(`${BASE}data/${file}`)
     .then(r => { if (!r.ok) throw new Error(`${file}: ${r.status}`); return r.blob(); })
     // premultiplyAlpha: "none" — galaksi haritalarında alfa saydamlık değil toz derinliği; renk alfayla çarpılmamalı
-    .then(b => createImageBitmap(b, { imageOrientation: "flipY", premultiplyAlpha: "none" }))
-    .then(bmp => {
-      const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
-      tex.flipY = false;
-      tex.colorSpace = opts.srgb === false ? THREE.NoColorSpace : THREE.SRGBColorSpace;
-      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      tex.wrapS = opts.clamp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
-      tex.needsUpdate = true;
-      return queueUpload(renderer, tex);         // ilk göründüğü karede takılmasın
-    });
-  texCache.set(file, p);
+    .then(b => createImageBitmap(b, { imageOrientation: "flipY", premultiplyAlpha: "none" }));
+}
+
+let reviveBound = false;
+/** WebGL bağlamı geri gelince (telefonda arka plandan dönüş, bellek baskısı) kapatılmış görüntüleri yeniden çöz ve gönder */
+function bindRevive(r: THREE.WebGLRenderer) {
+  if (reviveBound) return;
+  reviveBound = true;
+  r.domElement.addEventListener("webglcontextrestored", () => {
+    for (const [file, tex] of live) decode(file).then(bmp => {
+      if (live.get(file) !== tex) { bmp.close(); return; }             // bu arada bırakıldı
+      // Yeni kaynak: three.js bağlam gelince kapalı (0×0) görüntüyle değişmez depolama ayırmış olabilir; aynı kaynağa
+      // tex.image ile yazmak o depolamaya sığmaz. Yeni kaynak için doğru boyutta yeniden ayırır; malzemeler aynı dokuyu görür.
+      tex.source = new THREE.Source(bmp); tex.needsUpdate = true;
+      return queueUpload(r, tex);
+    }).catch(e => console.warn(e));
+  });
+}
+
+/**
+ * public/data altındaki bir dokuyu bir kez yükler (ImageBitmap, v=1 görüntünün üstü). Sarma gibi ayarlar burada verilir:
+ * doku ekran kartına gönderildikten sonra görüntüsü kapatılır, ayarı değiştirilemez. Her çağrı bir kullanım sayılır;
+ * kullanım bitince releaseDataTexture çağrılırsa doku ekran kartından silinir (çağrılmazsa uygulama boyunca kalır).
+ */
+export function loadDataTexture(renderer: THREE.WebGLRenderer, file: string, opts: TexOpts = {}): Promise<THREE.Texture> {
+  const hit = texCache.get(file);
+  if (hit) { hit.refs++; return hit.p; }
+  bindRevive(renderer);
+  const p = decode(file).then(bmp => {
+    const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+    tex.flipY = false;
+    tex.colorSpace = opts.srgb === false ? THREE.NoColorSpace : THREE.SRGBColorSpace;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    tex.wrapS = opts.clamp ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
+    tex.userData.closeAfterUpload = true;
+    tex.needsUpdate = true;
+    if (texCache.get(file)?.p === p) live.set(file, tex);
+    return queueUpload(renderer, tex);           // ilk göründüğü karede takılmasın
+  });
+  texCache.set(file, { p, refs: 1 });
   return p;
 }
 
-let earthTex: Promise<THREE.Texture> | null = null;
+/** loadDataTexture'ın bir kullanımını bırakır; kullanan kalmayınca doku ekran kartından silinir. */
+export function releaseDataTexture(file: string) {
+  const e = texCache.get(file);
+  if (!e || --e.refs > 0) return;
+  texCache.delete(file);
+  e.p.then(t => { if (live.get(file) === t) live.delete(file); t.dispose(); }).catch(() => {});
+}
 
-/** Dünya gece dokusu (SPEC §5.9): Perde 1 başlayınca arka planda yüklenir; aynı söz tekrar döner. */
-export function loadEarthTexture(renderer: THREE.WebGLRenderer, variant: "8k" | "4k"): Promise<THREE.Texture> {
-  if (earthTex) return earthTex;
-  earthTex = fetch(`${BASE}data/earth_night_${variant}.jpg`)
-    .then(r => { if (!r.ok) throw new Error(`earth_night_${variant}.jpg: ${r.status}`); return r.blob(); })
-    .then(b => createImageBitmap(b, { imageOrientation: "flipY" }))
-    .then(bmp => {
-      const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
-      tex.flipY = false;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-      tex.needsUpdate = true;
-      return queueUpload(renderer, tex);         // kalkışta değil, yüklenince gönder
-    });
-  return earthTex;
+/**
+ * Yalnızca gerektiğinde ekran kartında duran doku (telefon belleği): update(yükle, bırak) her kare çağrılır.
+ * İki koşul arasında boşluk bırakılmalı; sınırda gidip gelince doku sürekli yüklenip silinmesin.
+ */
+export class LazyTexture {
+  on = false;
+  private gen = 0;
+  constructor(private r: THREE.WebGLRenderer, readonly file: string, private set: (t: THREE.Texture | null) => void, private opts: TexOpts = {}) {}
+  update(load: boolean, drop: boolean) {
+    if (!this.on && load) {
+      this.on = true;
+      const g = ++this.gen;
+      loadDataTexture(this.r, this.file, this.opts).then(t => { if (g === this.gen) this.set(t); }).catch(e => console.warn(e));
+    } else if (this.on && drop) {
+      this.on = false;
+      this.gen++;                                // yolda olan yükleme artık atanmasın
+      this.set(null);
+      releaseDataTexture(this.file);
+    }
+  }
 }
 
 let cosmicP: Promise<{ data: Float32Array; names: Map<number, string> }> | null = null;

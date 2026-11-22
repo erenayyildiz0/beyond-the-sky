@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { annotateInto } from "../ui/glossary";
-import { loadDataTexture } from "../app/assets";
+import { LazyTexture } from "../app/assets";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import vert from "../render/shaders/planet.vert.glsl?raw";
@@ -110,6 +110,8 @@ export class Compare implements Scene {
   private frustum = new THREE.Frustum();
   private m4 = new THREE.Matrix4();
   private shownKey = "";
+  /** Dokular yalnızca odaktaki cisim ve yakın komşuları için ekran kartında (hepsi birden telefonda ~130 MB) */
+  private maps: { i: number; tex: LazyTexture }[] = [];
 
   enter(ctx: AppContext) {
     this.ctx = ctx;
@@ -118,7 +120,7 @@ export class Compare implements Scene {
     ITEMS.forEach((it, i) => {
       if (i > 0) x += EXT(ITEMS[i - 1]) * ITEMS[i - 1].rKm + 0.35 * it.rKm + EXT(it) * it.rKm;
       this.x.push(x);
-      this.scene.add(this.makeBody(it, x));
+      this.scene.add(this.makeBody(it, x, i));
     });
     // Arka plan: yordamsal yıldızlar (kara deliklerin büktüğü gökyüzüyle aynı)
     const bg = createBlackHole(new THREE.Vector3(), 1e-9, { disk: 0, full: true });
@@ -131,7 +133,7 @@ export class Compare implements Scene {
     precompile(ctx.renderer, this.scene, this.cam);          // ilk göründüğünde derleme takılması olmasın
   }
 
-  private makeBody(it: Item, x: number): THREE.Object3D {
+  private makeBody(it: Item, x: number, i: number): THREE.Object3D {
     let mat: THREE.ShaderMaterial;
     if ("pulsarHz" in it.look) {
       const p = createPulsar(it.rKm, it.look.pulsarHz);
@@ -158,7 +160,7 @@ export class Compare implements Scene {
         uRingN: { value: new THREE.Vector3(0, 1, 0) }, uRingIn: { value: 0 }, uRingOut: { value: 0 },
         uMinnaert: { value: PLANET_LOOK[it.key]?.[2] ?? 1 }, uAtmo: { value: new THREE.Vector4(...(PLANET_LOOK[it.key]?.[3] ?? [0, 0, 0, 0])) },
       } });
-      if (look.map) loadDataTexture(this.ctx.renderer, look.map).then(tx => { mat.uniforms.uMap.value = tx; mat.uniforms.uHasMap.value = 1; }).catch(e => console.warn(e));
+      if (look.map) this.maps.push({ i, tex: new LazyTexture(this.ctx.renderer, look.map, tx => { mat.uniforms.uMap.value = tx; mat.uniforms.uHasMap.value = tx ? 1 : 0; }) });
     }
     const m = new THREE.Mesh(new THREE.SphereGeometry(it.rKm, 96, 48), mat);
     m.position.set(x, 0, 0);
@@ -220,6 +222,7 @@ export class Compare implements Scene {
     this.cam.lookAt(cx - 0.6 * r, 0, 0);
     this.cam.near = D * 0.01; this.cam.far = D * 1e4;              // derinlik hassasiyeti: menzil 10^6 (uzaktakiler zaten piksel altı)
     for (const p of this.pulsars) p.update();
+    for (const m of this.maps) { const d = Math.abs(m.i - this.f); m.tex.update(d < 2.5, d > 4); }
     this.cam.updateProjectionMatrix();
     this.cam.updateMatrixWorld();
     this.frustum.setFromProjectionMatrix(this.m4.multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse));
@@ -263,5 +266,8 @@ export class Compare implements Scene {
 
   render(r: THREE.WebGLRenderer) { r.clear(); r.render(this.scene, this.cam); }
   onResize(w: number, h: number) { this.cam.aspect = w / h; this.cam.fov = w / h >= 1 ? 45 : 65; this.cam.updateProjectionMatrix(); }
-  exit() { this.ui.root.remove(); }
+  exit() {
+    this.ui.root.remove();
+    for (const m of this.maps) m.tex.update(false, true);
+  }
 }

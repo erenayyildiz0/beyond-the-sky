@@ -4,7 +4,6 @@ import { FpsProbe, PERF } from "../app/motion";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { bindHoldButton, HoldControl } from "../app/input";
-import { loadEarthTexture } from "../app/assets";
 import { frameSkyCamera, hFovDeg, SkyLook } from "../app/look";
 import { T } from "../app/timeline";
 import { createSkyDome, SKY_COLORS } from "../render/skyDome";
@@ -107,8 +106,7 @@ export class Act1Lights implements Scene {
     this.w.skyline.mesh.visible = true;
     this.w.skyline.material.uniforms.uOpacity.value = 1;
     this.w.starMat.uniforms.uTwinkle.value = 1;
-    // Dünya dokusu Perde 2 için arka planda (§6.10)
-    setTimeout(() => loadEarthTexture(ctx.renderer, ctx.assets.variant.earth).catch(e => console.warn(e)), 1500);
+    // Dünya dokuları Perde 2 için: ışıklar söndükten sonra prewarmFlight ile (burada yüklenirse Perde 1 boyunca boşuna ~45 MB tutar)
     ctx.director.setState("A1_CITY");
     this.buildUi();
   }

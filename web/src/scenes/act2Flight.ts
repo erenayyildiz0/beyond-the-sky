@@ -3,7 +3,7 @@ import { placeVars } from "../ui/place";
 import { annotateInto } from "../ui/glossary";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
-import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture, loadSmallBodies } from "../app/assets";
+import { LazyTexture, loadCosmic, loadDataTexture, loadDetail, loadSmallBodies } from "../app/assets";
 import { createStarBodyLayer } from "../render/starBody";
 import { kelvinToRgb, starRadius } from "../science/stars";
 import { createConstellationLines } from "../render/constellations";
@@ -85,7 +85,9 @@ interface FlightWorld {
   s2: ReturnType<typeof createMarkers>;
   sgraDot: ReturnType<typeof createMarkers>;
   cosmic: { c: ReturnType<typeof createCosmicScene>; names: Map<number, string>; data: Float32Array; web: ReturnType<typeof createProceduralWeb>;
-    webMat: THREE.ShaderMaterial; cmb: ReturnType<typeof createCmbSphere> } | null;
+    webMat: THREE.ShaderMaterial; cmb: ReturnType<typeof createCmbSphere>; cmbTex: LazyTexture } | null;
+  /** Dünya, Ay ve gezegen dokuları: yalnızca cisme yaklaşınca ekran kartında (updateResidency) */
+  lazy: { tex: LazyTexture; posKm: THREE.Vector3; rKm: number }[];
   starBody: ReturnType<typeof createStarBodyLayer>;
   lines: ReturnType<typeof createConstellationLines>;
   bubbleMat: THREE.ShaderMaterial;
@@ -142,18 +144,11 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
       applyWeight: w => earth.applyWeight(w), nearFar: c => earth.nearFar(c) },
   ];
   const r = ctx.renderer, big = ctx.assets.variant.earth === "8k";
-  loadEarthTexture(r, ctx.assets.variant.earth).then(tex => earth.setNightTexture(tex)).catch(e => console.warn(e));
-  // Gerçekçilik paketi R1: gündüz, Ankara karosu, Ay, Jüpiter (arka planda)
-  loadDataTexture(r, `earth_day_${big ? "8k" : "4k"}.jpg`).then(t => earth.setDayTexture(t)).catch(e => console.warn(e));
-  loadDataTexture(r, "ankara_night_2k.jpg").then(t => earth.setPatchTexture(t)).catch(e => console.warn(e));
-  loadDataTexture(r, `moon_${big ? "4k" : "2k"}.jpg`).then(t => earth.setMoonTexture(t)).catch(e => console.warn(e));
   const sb = sky.smallbodies;
   if (sb) loadSmallBodies().then(buf => {
     solar.setSmallBodies(buf, sb.count, matchMedia("(pointer: coarse)").matches ? 0.35 : 1);
     precompile(ctx.renderer, solar.scene, layers.find(L => L.name === "solar")!.camera);
   }).catch(e => console.warn(e));
-  for (const k of ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune"])
-    loadDataTexture(r, `planet_${k}.jpg`).then(t => solar.setPlanetTexture(k, t)).catch(e => console.warn(e));
 
   const route = routeFromSky(sky);
   const m = sky.meta;
@@ -172,6 +167,17 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     ],
     starPosLy: sw.starGeo.getAttribute("position").array as Float32Array,
   };
+  // Gerçekçilik paketi R1 dokuları (gece ışıkları, gündüz, Ankara karosu, Ay, gezegenler): tümü birlikte telefonda ~200 MB ekran
+  // kartı belleği tutuyordu. Her biri yalnızca cismin diski ekranda birkaç pikseli geçince yüklenir, uzaklaşınca bırakılır.
+  const lazy: FlightWorld["lazy"] = [];
+  const lz = (file: string, set: (t: THREE.Texture | null) => void, posKm: THREE.Vector3, rKm: number, opts?: { clamp?: boolean }) =>
+    lazy.push({ tex: new LazyTexture(r, file, set, opts), posKm, rKm });
+  const eR = ankaraRadiusKm(m.location.height_m);
+  lz(`earth_night_${ctx.assets.variant.earth}.jpg`, t => earth.setNightTexture(t), earthCenter, eR);
+  lz(`earth_day_${big ? "8k" : "4k"}.jpg`, t => earth.setDayTexture(t), earthCenter, eR);
+  lz("ankara_night_2k.jpg", t => earth.setPatchTexture(t), earthCenter, eR, { clamp: true });
+  lz(`moon_${big ? "4k" : "2k"}.jpg`, t => earth.setMoonTexture(t), moonKm, MOON_RADIUS_KM);
+  for (const p of planets) lz(`planet_${p.b.key}.jpg`, t => solar.setPlanetTexture(p.b.key, t), p.posKm, p.r);
   const nep = planets.find(p => p.b.key === "neptune")!;
   const stops = storyStops(sky, route, { moon: moonKm, sun: sunKm, neptune: nep.posKm, voyager: voyKm },
     { moon: MOON_RADIUS_KM, sun: SUN_RADIUS_KM, neptune: nep.r }, earthCenter);
@@ -196,7 +202,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     const particles = createGalaxyParticles(f, count, { sunLocal, nearR: radiusLy, spiral, radiusK: spiral ? radiusLy : radiusLy * 0.5 });
     particles.obj.renderOrder = 3;
     deep.scene.add(layered.group, particles.obj);
-    loadDataTexture(r, `galaxy_${key}.webp`, { srgb: false, clamp: true }).then(tx => layered.setMap(tx)).catch(e => console.warn(e));
+    loadDataTexture(r, `galaxy_${key}.webp`, { srgb: false, clamp: true }).then(tx => layered.setMap(tx)).catch(e => console.warn(e));   // küçük; hep yüklü
     galaxies.push({ key, layered, particles, local });
   };
   const mwCenter = gx.clone().multiplyScalar(26_700);                 // GRAVITY 2019 (§3.13)
@@ -326,11 +332,12 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   stops.sort((a, b) => a.z - b.z);
 
   (ctx.shared as Record<string, unknown>).__layers = layers;            // teşhis (yalnızca bellek)
-  world = { sgra: { posKm: sgraKm, rsKm }, layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, s2, sgraDot, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat,
+  world = { lazy, sgra: { posKm: sgraKm, rsKm }, layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, s2, sgraDot, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat,
     ray: createLightRay(), galPlane: new THREE.Plane().setFromNormalAndCoplanarPoint(gz.clone(), mwCenter.clone()) };
   world.deep.scene.add(world.ray.line);
   const w = world;
   for (const L of layers) precompile(ctx.renderer, L.scene, L.camera);
+  updateResidency(w, new THREE.Vector3());                             // kalkış Ankara'dan: Dünya ve Ay dokuları Perde 1'de hazır olsun
   loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
   loadCosmic().then(({ data, names }) => {
     const c = createCosmicScene(data);
@@ -347,11 +354,18 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     c.scene.add(web.pts);
     const cmb = createCmbSphere(CMB_DIST_MLY, sky.frames.gal_to_enu);
     c.scene.add(cmb.mesh);
-    loadDataTexture(r, "cmb_2k.jpg").then(tx => { cmb.mat.uniforms.uMap.value = tx; }).catch(e => console.warn(e));
-    w.cosmic = { c, names, data, web, webMat, cmb };
+    const cmbTex = new LazyTexture(r, "cmb_2k.jpg", tx => { cmb.mat.uniforms.uMap.value = tx; });   // evren ölçeğine yaklaşınca
+    w.cosmic = { c, names, data, web, webMat, cmb, cmbTex };
     precompile(ctx.renderer, c.scene, camera);
   }).catch(e => console.warn(e));
   return world;
+}
+
+/** Dokuları kameranın konumuna göre yükler ya da bırakır; her kare (ucuz: bir düzine uzaklık). */
+function updateResidency(w: FlightWorld, camKm: THREE.Vector3) {
+  // yarıçapın 400 katında disk ~4 piksel (60° görüş, 800 piksel): dokusuz renkli diskten farkı görünmeye başlar
+  for (const L of w.lazy) { const k = camKm.distanceTo(L.posKm) / L.rKm; L.tex.update(k < 400, k > 1000); }
+  if (w.cosmic) { const z = Math.log10(Math.max(camKm.length(), 1e-3)); w.cosmic.cmbTex.update(z > 19, z < 18); }   // cosmicWeight 19,5'te başlar
 }
 
 interface Plan {
@@ -544,6 +558,7 @@ export class Act2Flight implements Scene {
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
     const stopCard = new StopCard(root);
     const toBirth = el("button", "next-btn to-birth cta", `${t("act2.toBirth")} ›`, root);
+    el("small", "", t("act2.toBirthSub"), toBirth);                   // ne olduğu anlaşılsın: yalnızca başlık doğum yılını anlatmıyordu
     toBirth.addEventListener("click", () => this.openBirth());
     const birth = el("div", "birth-panel", undefined, root);
     el("div", "birth-ask poem", t("act3.ask"), birth);
@@ -661,9 +676,9 @@ export class Act2Flight implements Scene {
     }
   }
 
-  private updateBirthUi(z: number, near: string | null, dt: number) {
-    const m31 = this.w.stops.findIndex(s => s.key === "m31");
-    const far = near != null && this.w.stops.findIndex(s => s.key === near) >= m31;       // Andromeda ve ötesindeki duraklar
+  private updateBirthUi(z: number, dt: number) {
+    // Andromeda'nın uzaklığı ya da ötesi: durakta olmasa da (serbest uçuşla Andromeda'yı geçen de görsün); ~0,15 dex pay
+    const far = z >= (this.w.stops.find(s => s.key === "m31")?.z ?? Infinity) - 0.15;
     this.atM31S = far && !this.plan ? this.atM31S + dt : 0;
     show(this.ui.toBirth, !this.explore && this.phase === "free" && this.atM31S > 3);          // §6.5.7: kart belirdikten 3 sn sonra
     const ret = this.phase === "return";
@@ -1166,6 +1181,7 @@ export class Act2Flight implements Scene {
     this.updateStarBody(sInfo);
     if (!this.ascentAuto) this.freeHintS += dt;
     const z = Math.log10(Math.max(this.C.length(), 1e-3));
+    updateResidency(this.w, this.C);
     this.w.state.altKm = alt;
     this.w.state.nearStarLy = this.nearStar.dLy;
     this.w.state.bhDistRs = this.C.distanceTo(this.w.sgra.posKm) / this.w.sgra.rsKm;
@@ -1351,7 +1367,7 @@ export class Act2Flight implements Scene {
     }
     // Tahmin sırasında ("Güneş nerede?") durak kartı cevabı söylemesin
     this.ui.stopCard.set(this.phase === "free" && !this.guessing ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
-    this.updateBirthUi(z, near, this.dtLast);
+    this.updateBirthUi(z, this.dtLast);
     const outside = (near === "galaxy" || near === "galaxyTop") && this.phase === "free" && !this.plan;
     show(this.whereBtn, outside && !this.guessing && !this.whereMsg.classList.contains("on"));
     if (!outside && this.guessing) { this.guessing = false; show(this.whereMsg, false); }

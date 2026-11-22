@@ -146,9 +146,9 @@ export function createSolarLayer(sky: Sky) {
       scene.add(belts.obj);
       belts.material.uniforms.uOpacity.value = belts.base * weight * beltFade;
     },
-    setPlanetTexture(key: string, t: THREE.Texture) {
+    setPlanetTexture(key: string, t: THREE.Texture | null) {
       const m = matByKey.get(key);
-      if (m) { m.uniforms.uMap.value = t; m.uniforms.uHasMap.value = 1; }
+      if (m) { m.uniforms.uMap.value = t ?? blank; m.uniforms.uHasMap.value = t ? 1 : 0; }
     },
     /** camAU: kamera konumu (AB); Güneş halesi diskin görünen boyutuyla büyür (temsili hale) */
     update(pixelRatio: number, voyagerLine: number, camAU?: THREE.Vector3, fovDeg = 60, viewH = 800) {

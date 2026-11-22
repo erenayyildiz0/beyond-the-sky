@@ -3,6 +3,7 @@ import { hasSkyWorld } from "./act1Lights";
 import { chooseNight, relocateSky, visibilityFor, type Pollution } from "../science/relocate";
 import { RELOC } from "../science/reloc";
 import { loadRelocationData } from "../app/assets";
+import { isInstalled, isIos, onInstallable, promptInstall } from "../app/install";
 import { placeVars } from "../ui/place";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
@@ -45,6 +46,7 @@ export class Intro implements Scene {
     }
     el("div", "intro-sound", t("intro.sound"), root);
     this.buildLocation(root);
+    this.buildInstall(root);
     const sw = el("div", "lang-switch", undefined, root);
     for (const l of ["tr", "en"] as const) {
       const b = el("button", l === lang ? "sel" : "", l.toUpperCase(), sw);
@@ -105,6 +107,22 @@ export class Intro implements Scene {
     };
     btn.addEventListener("click", ask);
     if (this.ctx.params.loc) { this.ctx.params.loc = false; ask(); }
+  }
+
+  /** "Uygulama olarak yükle": Android/masaüstünde tarayıcının yükleme penceresi, iOS'ta Ana Ekrana Ekle talimatı */
+  private buildInstall(root: HTMLElement) {
+    if (isInstalled()) return;
+    const box = el("div", "loc", undefined, root);
+    const add = () => el("button", "loc-link", `📲 ${t("install.app")}`, box);
+    if (isIos()) {
+      const btn = add(), note = el("div", "loc-note", "", box);
+      btn.addEventListener("click", () => { note.textContent = t("install.ios"); });
+      return;
+    }
+    onInstallable(() => {
+      const btn = add();
+      btn.addEventListener("click", () => { promptInstall().then(ok => { if (ok) box.remove(); }).catch(e => console.warn(e)); });
+    });
   }
 
   private async relocate(lat: number, lon: number, heightM: number, p: Pollution) {
