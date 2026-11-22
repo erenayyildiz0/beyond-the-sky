@@ -91,6 +91,8 @@ interface FlightWorld {
   starOrigin: THREE.Vector3;
   detail: { ci: (number | null)[]; con: string[]; spect: (string | null)[] } | null;
   ray: ReturnType<typeof createLightRay>;
+  /** Samanyolu'nun düzlemi (deep katmanı, ışık yılı): "Güneş nerede?" tahmini bununla kesiştirilir (§6.5.6) */
+  galPlane: THREE.Plane;
 }
 
 const MLY_KM = 1e6 * LY_KM;
@@ -324,7 +326,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
 
   (ctx.shared as Record<string, unknown>).__layers = layers;            // teşhis (yalnızca bellek)
   world = { sgra: { posKm: sgraKm, rsKm }, layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, s2, sgraDot, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat,
-    ray: createLightRay() };
+    ray: createLightRay(), galPlane: new THREE.Plane().setFromNormalAndCoplanarPoint(gz.clone(), mwCenter.clone()) };
   world.deep.scene.add(world.ray.line);
   const w = world;
   for (const L of layers) precompile(ctx.renderer, L.scene, L.camera);
@@ -403,6 +405,10 @@ export class Act2Flight implements Scene {
   private histLookback = 0;
   private histS = 1;
   private mlog: MissionLog | null = null;
+  private guessing = false;
+  private whereBtn!: HTMLButtonElement;
+  private whereMsg!: HTMLElement;
+  private guessMark!: HTMLElement;
   private missions: MissionsUi | null = null;
   private flyTarget: Target | null = null;
   private ui!: {
@@ -560,6 +566,14 @@ export class Act2Flight implements Scene {
     card.onShare = () => { if (this.selected) this.share(this.shareText(this.selected)); };
     this.rayLabel = el("div", "ray-label", undefined, root);
     this.histBox = new HistoryBox(root, import.meta.env.BASE_URL);
+    // "Güneş nerede?" (§6.5.6): galaksiye dışarıdan bakarken tahmin
+    this.whereBtn = el("button", "next-btn where-btn", t("where.btn"), root);
+    this.whereBtn.addEventListener("click", () => {
+      this.guessing = true; this.ui.card.hide();
+      this.whereMsg.textContent = t("where.ask"); show(this.whereMsg); show(this.whereBtn, false);
+    });
+    this.whereMsg = el("div", "where-msg poem", "", root);
+    this.guessMark = el("div", "guess-mark", undefined, root);
     if (this.explore) {
       let seen = false;
       try { seen = localStorage.getItem("bts.tipsSeen") === "1"; } catch { /* özel mod */ }
@@ -911,6 +925,21 @@ export class Act2Flight implements Scene {
     if (!events.length) return;
     this.ui.card.hide();
     this.histBox.open(events, lookback, this.ctx.assets.sky.meta.obs_year_frac, getLang());
+  }
+
+  /** Tahmin: dokunulan noktadan çıkan ışın galaksi düzlemiyle kesişir; kesişimin Güneş'e (orijin) uzaklığı */
+  private guess(x: number, y: number) {
+    const cam = this.layerCam("deep");
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1), cam);
+    const hit = rc.ray.intersectPlane(this.w.galPlane, new THREE.Vector3());
+    if (!hit) { this.whereMsg.textContent = t("where.miss"); return; }
+    this.guessing = false;
+    const ly = hit.length(), lang = getLang();
+    this.whereMsg.textContent = t("where.result", { n: fmtInt(ly < 1000 ? Math.round(ly / 10) * 10 : +ly.toPrecision(2), lang) });
+    moveLabel(this.guessMark, x, y); show(this.guessMark);
+    this.ui.hereLabel.classList.add("flash");                 // sonra "Buradasın" parlar
+    window.setTimeout(() => { show(this.whereMsg, false); show(this.guessMark, false); this.ui.hereLabel.classList.remove("flash"); }, 6000);
   }
 
   private tipDone(kind: "look" | "fly" | "tap") {
@@ -1304,8 +1333,12 @@ export class Act2Flight implements Scene {
       const r = st.key === "sgra" ? 500 * this.w.sgra.rsKm : st.key === "s2" ? 2e5 * this.w.sgra.rsKm : 0.08 * st.pos.length();
       if (d < r && d < bestStop) { bestStop = d; near = st.key; }
     }
-    this.ui.stopCard.set(this.phase === "free" ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
+    // Tahmin sırasında ("Güneş nerede?") durak kartı cevabı söylemesin
+    this.ui.stopCard.set(this.phase === "free" && !this.guessing ? near : null, near ? t(`ruler.${near}` as "ruler.earth") : "", near ? this.stopText(near) : "");
     this.updateBirthUi(z, near, this.dtLast);
+    const outside = (near === "galaxy" || near === "galaxyTop") && this.phase === "free" && !this.plan;
+    show(this.whereBtn, outside && !this.guessing && !this.whereMsg.classList.contains("on"));
+    if (!outside && this.guessing) { this.guessing = false; show(this.whereMsg, false); }
     if (near && near !== this.lastCard && this.phase === "free") this.ctx.audio?.chime();   // durakta zil
     this.lastCard = near;
     this.ctx.audio?.setFlight(z, Math.min(1, Math.abs(this.v) / Math.max(1e-9, 0.6 * localScaleKm(this.C, this.w.space, this.nearStar.dLy))) * 0.8);
@@ -1330,6 +1363,7 @@ export class Act2Flight implements Scene {
   // ---------- dokunma ----------
 
   private pick(x: number, y: number) {
+    if (this.guessing) { this.guess(x, y); return; }
     if (this.plan) { this.plan = null; this.ui.card.hide(); return; }   // dokunuş uçuşu durdurur
     const W = innerWidth, H = innerHeight;
     const z = Math.log10(Math.max(this.C.length(), 1e-3));

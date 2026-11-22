@@ -362,3 +362,12 @@ button { font: inherit; color: inherit; }
   background: rgba(6, 9, 18, .95); border: 1px solid rgba(143, 184, 255, .45); border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
   opacity: 0; pointer-events: none; transition: opacity .15s ease; }
 .glossary-pop.on { opacity: 1; pointer-events: auto; }
+
+/* "Güneş nerede?" (§6.5.6) */
+.where-btn { bottom: auto; top: 26%; }
+.where-msg { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); width: min(560px, 88vw); text-align: center;
+  font-size: calc(var(--size-hero) * .55); text-shadow: 0 0 12px #000; pointer-events: none; }
+.guess-mark { position: absolute; left: 0; top: 0; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%;
+  border: 2px solid #FFE7B0; pointer-events: none; }
+.body-label.here.flash { color: #FFE7B0; text-shadow: 0 0 12px #FFE7B0; animation: here-flash 0.8s ease-in-out 4; }
+@keyframes here-flash { 50% { opacity: .35; } }
