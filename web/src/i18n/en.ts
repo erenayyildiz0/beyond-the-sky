@@ -90,6 +90,8 @@ export const en: Record<Key, string> = {
   "loc.denied": "Location permission not given; continuing with Ankara's sky.",
   "loc.unavailable": "This browser can't provide a location; continuing with Ankara's sky.",
   "loc.failed": "Couldn't compute the sky for this location; continuing with Ankara's sky.",
+  "loc.noNight": "The sky here doesn't get dark enough in the next 30 days; continuing with Ankara's sky.",
+  "loc.nautical": "The night here doesn't get fully dark this season (the Sun stays between −12° and −18°); the sky may look darker than it is.",
   "loc.ankara": "Back to Ankara's sky",
   "loc.note": "Your location and your first moonless night · estimate based on your light-pollution choice (SQM {sqm})",
   "act1.now.tonight": "This is tonight's sky as seen from {place}.",

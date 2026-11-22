@@ -89,6 +89,8 @@ export const tr = {
   "loc.denied": "Konum izni verilmedi; Ankara gökyüzüyle devam.",
   "loc.unavailable": "Bu tarayıcı konum vermiyor; Ankara gökyüzüyle devam.",
   "loc.failed": "Bu konum için gökyüzü hesaplanamadı; Ankara gökyüzüyle devam.",
+  "loc.noNight": "Bu mevsimde burada önümüzdeki 30 günde gece yeterince kararmıyor; Ankara gökyüzüyle devam.",
+  "loc.nautical": "Bu mevsimde burada gece tam kararmıyor (Güneş en fazla −12° ile −18° arasında); gökyüzü olduğundan karanlık gösterilebilir.",
   "loc.ankara": "Ankara gökyüzüne dön",
   "loc.note": "Senin konumun ve ilk aysız gecen · ışık kirliliği seçimine göre tahmini (SQM {sqm})",
   "act1.now.tonight": "{place_ablative} bu gece görebileceğin gökyüzü bu.",

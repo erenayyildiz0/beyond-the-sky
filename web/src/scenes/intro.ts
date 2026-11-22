@@ -72,10 +72,12 @@ export class Intro implements Scene {
         const u = new URL(location.href); u.searchParams.delete("loc"); location.href = u.toString();
       });
       el("div", "loc-note", t("loc.note", { sqm: m.visibility.sqm_city.toLocaleString(getLang() === "tr" ? "tr-TR" : "en-US") }), box);
+      if (this.nautical) el("div", "loc-note", t("loc.nautical"), box);
       return;
     }
     const btn = el("button", "loc-link", `📍 ${t("loc.use")}`, box);
     const msg = el("div", "loc-note", "", box);
+    this.locMsg = (text: string) => { msg.textContent = text; };
     const ask = () => {
       if (hasSkyWorld()) {                                            // dünyalar Ankara için kuruldu: temiz sayfada başla
         const u = new URL(location.href); u.searchParams.set("loc", "1"); location.href = u.toString(); return;
@@ -102,8 +104,9 @@ export class Intro implements Scene {
 
   private async relocate(lat: number, lon: number, heightM: number, p: Pollution) {
     const ctx = this.ctx, a = ctx.assets;
-    const night = chooseNight(lat, lon, heightM, new Date());
-    if (!night) throw new Error("30 gün içinde aysız gece yok");
+    const found = chooseNight(lat, lon, heightM, new Date());
+    if (!found) { this.locMsg(t("loc.noNight")); return; }
+    const night = found.date;
     const data = await loadRelocationData(a.variant.milkyWay);
     const vis = visibilityFor(p, a.sky.meta.visibility);
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -111,8 +114,12 @@ export class Intro implements Scene {
     a.sky = sky; a.milkyWay = data.milkyWay; RELOC.R = R;
     ctx.tune.sqmCity = vis.sqm_city;
     ctx.shared = {};
+    this.nautical = found.sunLimit > -18;
     this.build();                                                // yer/tarih satırı ve Ankara'ya dön bağlantısı
   }
+
+  private nautical = false;
+  private locMsg: (text: string) => void = () => {};
 
   private started = false;
 

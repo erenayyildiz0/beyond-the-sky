@@ -83,14 +83,21 @@ Sıra: Faz 1 (M3–M6) bittikten sonra **E1 → E2**. Her ikisi de M2'nin göky�
 
 **Ne:** Kullanıcı izin verirse cihaz konumuyla gökyüzü tarayıcıda hesaplanır.
 
-- Zaman: o konumda 21:00'de Ay'ın ufkun en az 10° altında olduğu ilk gece (SPEC §5.5 mantığı); ekranda tarih yazar.
+- Zaman: o konumda 21:00'de Ay'ın ufkun en az 10° altında, Güneş'in −18° altında olduğu ilk gece (SPEC §5.5 mantığı); ekranda
+  tarih ve saat yazar. 21:00'de henüz karanlık olmayan yerlerde (ör. yazın Sidney: Güneş −14°) aynı gece 22:00, 23:00, 00:00
+  denenir; astronomik karanlık hiç yoksa deniz karanlığı (−12°) kabul edilir ve ekranda belirtilir; o da yoksa Ankara ile devam.
 - Veri: pipeline'ın yazdığı `stars_icrs.json` (RA/Dec, sky.json ile aynı sıra) ve `milkyway_icrs_{4k,2k}.webp`
   (göksel koordinatlarda, merkez 0h, RA sola artar).
 - Web: ICRS → ufuk dönüşümü (yerel yıldız zamanı + presesyon), Ay/Güneş/gezegenler için çevrimdışı bir JS
   efemeris kütüphanesi. Kubbe shader'ı ICRS dokusunu dönme matrisiyle örnekler.
 - Doğum yıldızı ve görünürlük sayımları o konum için yeniden hesaplanır.
-- Işık kirliliği: konumdan SQM bilinmiyor → kullanıcı "şehir merkezi / banliyö / kırsal" seçer (Bortle'a karşılık
-  gelen SQM değerleri, kaynaklı), ya da E2'de fotoğraftan kaba tahmin.
+- Işık kirliliği: konumdan SQM bilinmiyor → kullanıcı "şehir merkezi / banliyö / kırsal" seçer: Bortle (2001) sınıf 8, 5 ve 3'ün
+  çıplak göz limit kadirlerinin ortası (4,3 · 5,8 · 6,8) uygulamanın NELM–SQM dönüşümünün (Schaefer 1990) tersiyle SQM'ye çevrilir;
+  ufuk parlaması Ankara'nın şehir ve karanlık değerleri arasında SQM ile doğrusal (sezgisel).
+- Uygulama (22.11.2026): web/src/science/relocate.ts (astronomy-engine, MIT). Uzak cisimlerin Ankara ENU vektörleri tek dönmeyle
+  taşınır (R = M_yeni · M_Ankaraᵀ); Güneş Sistemi efemeristen; asteroit konumları pipeline gecesinindir (yalnızca çerçeve döner).
+  Doğrulama: Ankara koordinatlarıyla tarayıcıda hesaplanan gökyüzü pipeline'ınkiyle aynı (sayım 3.190 / 3.189, görüntü farkı
+  yalnızca gren); Sidney'de 27 Kasım 22:00.
 - Gizlilik: konum yalnızca bellekte; kaydedilmez, ağa gönderilmez.
 
 **Kabul:** Ankara koordinatları girilince sayımlar sky.json ile ±2 içinde; başka bir şehirde Polaris yüksekliği enlemle < 1°.

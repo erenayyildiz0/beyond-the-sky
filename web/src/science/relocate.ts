@@ -41,13 +41,22 @@ function moonSunAlt(date: Date, obs: A.Observer) {
   return { moon: alt(A.Body.Moon), sun: alt(A.Body.Sun) };
 }
 
-/** Zaman seçimi (SPEC §5.5): cihaz saatiyle 21:00'de Ay −10°, Güneş −18° altında olan ilk gece (30 gün içinde) */
-export function chooseNight(lat: number, lon: number, heightM: number, from: Date, opts = { hour: 21, days: 30, maxMoon: -10, maxSun: -18 }) {
+/**
+ * Zaman seçimi (SPEC §5.5'in genellemesi, EXTRAS E1): cihaz saatiyle Ay −10°, Güneş −18° altında olan ilk gece (30 gün).
+ * Önce 21:00; o saatte karanlık olmayan yerlerde (ör. yazın güney yarımküre: Sidney'de 21:00'de Güneş −14°) aynı gece
+ * 22:00, 23:00 ve 00:00 denenir. Astronomik karanlık hiç yoksa (yüksek enlemde yaz) deniz karanlığı (−12°) kabul edilir.
+ * Dönüş: tarih ve kullanılan Güneş sınırı; bulunamazsa null.
+ */
+export function chooseNight(lat: number, lon: number, heightM: number, from: Date, opts = { hours: [21, 22, 23, 24], days: 30, maxMoon: -10 }) {
   const obs = new A.Observer(lat, lon, heightM);
-  for (let d = 0; d < opts.days; d++) {
-    const local = new Date(from.getFullYear(), from.getMonth(), from.getDate() + d, opts.hour, 0, 0);
-    const { moon, sun } = moonSunAlt(local, obs);
-    if (moon < opts.maxMoon && sun < opts.maxSun) return local;
+  for (const maxSun of [-18, -12]) {
+    for (let d = 0; d < opts.days; d++) {
+      for (const h of opts.hours) {
+        const local = new Date(from.getFullYear(), from.getMonth(), from.getDate() + d, h, 0, 0);   // 24 → ertesi gün 00:00
+        const { moon, sun } = moonSunAlt(local, obs);
+        if (moon < opts.maxMoon && sun < maxSun) return { date: local, sunLimit: maxSun };
+      }
+    }
   }
   return null;
 }
