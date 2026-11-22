@@ -145,8 +145,18 @@ button { font: inherit; color: inherit; }
 .ruler-name { font-size: 11px; white-space: nowrap; opacity: .75; transform: translateY(var(--nudge, 0)); }
 .ruler-mark.near .ruler-name { color: var(--text); opacity: 1; }
 .ruler-mark:hover .ruler-name { opacity: 1; }
-.ruler-cursor { position: absolute; right: 3px; width: 11px; height: 11px; margin-bottom: -5.5px; border-radius: 50%;
-  background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.ruler-cursor { position: absolute; right: -1px; width: 19px; height: 19px; margin-bottom: -9.5px; border-radius: 50%;
+  background: radial-gradient(circle, var(--accent) 0 5px, transparent 6px); box-shadow: 0 0 10px rgba(143, 184, 255, .6);
+  cursor: grab; touch-action: none; pointer-events: auto; z-index: 3; }
+.ruler-cursor:active { cursor: grabbing; }
+/* Şerit: durak işaretlerinin arasına da dokunulabilir (geniş dokunma alanı) */
+.ruler-track { position: absolute; right: -6px; top: -8px; bottom: -8px; width: 30px; cursor: pointer; touch-action: none; pointer-events: auto; z-index: 2; }
+.ruler-mark { z-index: 1; }
+.ruler-ghost { position: absolute; right: 3px; width: 11px; height: 11px; margin-bottom: -5.5px; border-radius: 50%;
+  border: 1.5px solid #FFE7B0; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.ruler-ghost.on { opacity: 1; }
+.ruler-ghost-label { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: var(--size-small);
+  color: #FFE7B0; background: rgba(2, 4, 10, .85); padding: 4px 8px; border-radius: 8px; }
 .fly-controls { position: absolute; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translateX(-50%); display: flex; gap: 14px; }
 .fly-btn { min-width: 96px; height: 64px; border-radius: 32px; border: 1px solid var(--badge-border); background: var(--badge-bg);
   cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding: 0 22px; }
@@ -329,7 +339,26 @@ button { font: inherit; color: inherit; }
 .fallback-text { max-width: 520px; color: var(--muted); }
 .fallback-cap { font-size: var(--size-small); color: var(--muted); margin-top: -8px; }
 
+/* Yönlendirme: kullanıcı ilk kez kullanana kadar ana düğme yumuşakça nabız atar (nereye basacağı belli olsun) */
+.cta { border-color: var(--accent) !important; color: var(--text); animation: cta-pulse 2.2s ease-out infinite; }
+@keyframes cta-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(143, 184, 255, .55), 0 0 14px rgba(143, 184, 255, .35); }
+  70% { box-shadow: 0 0 0 14px rgba(143, 184, 255, 0), 0 0 22px rgba(143, 184, 255, .45); }
+  100% { box-shadow: 0 0 0 0 rgba(143, 184, 255, 0), 0 0 14px rgba(143, 184, 255, .35); }
+}
+.hold-btn.cta { border: 1px solid var(--accent); }
+@media (prefers-reduced-motion: reduce) { .cta { box-shadow: 0 0 18px rgba(143, 184, 255, .5) !important; } }
+
 /* SPEC §6.10: azaltılmış hareket — yanıp sönme ve nefes yok, geçişler kısa */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: .2s !important; }
 }
+
+/* Sözlük: dokunulabilir terimler ve açıklama kutusu */
+.term { text-decoration: underline dotted rgba(143, 184, 255, .7); text-underline-offset: 3px; cursor: help; pointer-events: auto; }
+.term:hover, .term:focus-visible { color: var(--accent); outline: none; }
+.act2 > :not(.on) .term, .act3 > :not(.on) .term { pointer-events: none; }
+.glossary-pop { position: fixed; z-index: 30; padding: 10px 12px; font: 400 var(--size-small)/1.45 var(--font-ui); color: var(--text);
+  background: rgba(6, 9, 18, .95); border: 1px solid rgba(143, 184, 255, .45); border-radius: 10px; box-shadow: 0 8px 30px rgba(0, 0, 0, .5);
+  opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+.glossary-pop.on { opacity: 1; pointer-events: auto; }

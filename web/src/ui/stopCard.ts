@@ -1,4 +1,5 @@
 import { el, show } from "./hud";
+import { annotateInto } from "./glossary";
 
 /** Durak kartı (SPEC §6.5.6): alt-ortada başlık + 1–2 satır. */
 export class StopCard {
@@ -16,7 +17,7 @@ export class StopCard {
   set(key: string | null, title = "", text = "") {
     if (key === this.key) return;
     this.key = key;
-    if (key) { this.title.textContent = title; this.text.textContent = text; }
+    if (key) { this.title.textContent = title; annotateInto(this.text, text); }
     show(this.root, key != null);
   }
 }

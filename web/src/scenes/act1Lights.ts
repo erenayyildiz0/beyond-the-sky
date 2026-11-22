@@ -127,7 +127,7 @@ export class Act1Lights implements Scene {
     const hint = el("div", "hint", t("act1.drag"), root);
     const count = el("div", "count", "", root);
     const holdWrap = el("div", "hold-wrap", undefined, root);
-    const btn = el("button", "hold-btn", undefined, holdWrap);
+    const btn = el("button", "hold-btn cta", undefined, holdWrap);          // ilk basışa kadar parlar
     btn.setAttribute("aria-label", t("act1.hold"));
     const ring = progressRing(btn);
     el("span", "hold-dot", undefined, btn);
@@ -237,6 +237,7 @@ export class Act1Lights implements Scene {
     show(ui.holdWrap, this.controlsOn && hold.p < 1);
     show(ui.dimmer, this.controlsOn);
     ui.holdWrap.classList.toggle("active", hold.holding);
+    if (hold.p > 0.02) ui.holdWrap.querySelector(".hold-btn")?.classList.remove("cta");
     show(ui.center, this.t < T.act1.introText + 4 && hold.p < 0.05 && !hold.locked);
     show(ui.hint, this.t < T.act1.introText + 4 && !hold.locked);
     if (this.lockedAt != null) {

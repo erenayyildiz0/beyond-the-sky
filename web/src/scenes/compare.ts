@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { annotateInto } from "../ui/glossary";
 import { loadDataTexture } from "../app/assets";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
@@ -223,14 +224,14 @@ export class Compare implements Scene {
 
   /** Başlık ve satırlar yalnızca odak değişince yazılır (her karede DOM yeniden düzenlenmesin) */
   private showText(cur: Item, lang: "tr" | "en") {
-    this.ui.title.textContent = lang === "tr" ? cur.tr : cur.en;
+    annotateInto(this.ui.title, lang === "tr" ? cur.tr : cur.en);
     const vsEarth = cur.rKm / EARTH_RADIUS_KM, vsSun = cur.rKm / SUN_RADIUS_KM;
     const rel = vsSun >= 0.5 ? t("compare.vsSun", { n: fmtDec(vsSun, vsSun < 10 ? 2 : 0, lang) })
       : vsEarth < 0.05 ? t("compare.earthTimes", { n: fmtInt(1 / vsEarth, lang) })
       : t("compare.vsEarth", { n: fmtDec(vsEarth, vsEarth < 10 ? 2 : 1, lang) });
     this.ui.size.textContent = `${t("compare.radius")}: ${fmtKm(cur.rKm, lang)} · ${rel}`;
     this.ui.src.textContent = `${t("compare.source")}: ${cur.source}`;
-    this.ui.note.textContent = cur.note ? cur.note[lang] : "";
+    annotateInto(this.ui.note, cur.note ? cur.note[lang] : "");
   }
 
   private v = new THREE.Vector3();

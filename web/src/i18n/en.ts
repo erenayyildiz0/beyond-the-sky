@@ -178,6 +178,8 @@ export const en: Record<Key, string> = {
   "stop.kuiper": "The Kuiper belt, beyond Neptune: {n} known icy bodies at their real positions tonight. Pluto lives here too.",
   "label.belts": "Real positions · JPL Small-Body Database orbits · dots drawn far larger than the bodies",
   "body.sgra": "Sgr A* · black hole",
+  "ruler.scrub": "Distance scale: tap or drag",
+  "ruler.around": "near {stop}",
   "ruler.sgra": "Galactic centre",
   "stop.sgra": "The centre of the Milky Way, ~{d} light-years away: Sgr A*, a black hole of 4.3 million solar masses. Starlight behind it bends around it; the darkness in the middle is the shadow from which no light escapes.",
   "card.sgra": "Mass 4.297 million M☉ (GRAVITY 2022) · light bending computed from the Schwarzschild solution · disc and background illustrative",

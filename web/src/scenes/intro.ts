@@ -30,12 +30,12 @@ export class Intro implements Scene {
     try { seen = localStorage.getItem("bts.storySeen") === "1"; } catch { /* özel mod */ }
     if (seen) {                                                // §6.7: hikâyeyi bitirene iki seçenek
       const row = el("div", "intro-row", undefined, root);
-      const a = el("button", "start-btn", t("explore.watchStory"), row);
+      const a = el("button", "start-btn cta", t("explore.watchStory"), row);
       a.addEventListener("click", () => this.start());
       const b = el("button", "start-btn", `${t("explore.skipToExplore")} ›`, row);
       b.addEventListener("click", () => this.start("explore"));
     } else {
-      const start = el("button", "start-btn", t("intro.start"), root);
+      const start = el("button", "start-btn cta", t("intro.start"), root);
       start.addEventListener("click", () => this.start());
     }
     el("div", "intro-sound", t("intro.sound"), root);

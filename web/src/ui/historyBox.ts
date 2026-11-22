@@ -1,4 +1,5 @@
 import { el, show } from "./hud";
+import { annotateInto } from "./glossary";
 import { t } from "./i18n";
 import { fmtInt, type Lang } from "./format";
 import { eventAgo, type HistoryEvent } from "../content/history";
@@ -46,7 +47,7 @@ export class HistoryBox {
         if (e.credit) el("div", "history-credit", e.credit, sec);
       }
       el("div", "history-date", historyDate(e, lang), sec);
-      el("div", "history-text", lang === "tr" ? e.tr : e.en, sec);
+      annotateInto(el("div", "history-text", undefined, sec), lang === "tr" ? e.tr : e.en);
       const gap = eventAgo(e, obsYear) - lookback;
       if (Math.abs(gap) >= 1) {
         const n = fmtInt(Math.abs(gap) >= 100 ? +Math.abs(gap).toPrecision(2) : Math.round(Math.abs(gap)), lang);

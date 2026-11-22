@@ -172,6 +172,8 @@ export const tr = {
   "body.moon": "Ay",
   "body.voyager": "Voyager 1",
   "body.sgra": "Sgr A* · kara delik",
+  "ruler.scrub": "Uzaklık cetveli: dokun ya da sürükle",
+  "ruler.around": "{stop} civarı",
   "ruler.sgra": "Samanyolu'nun merkezi",
   "stop.sgra": "Samanyolu'nun merkezi, ~{d} ışık yılı uzakta: Sgr A*, Güneş'in 4,3 milyon katı kütleli kara delik. Arkadaki yıldızların ışığı çevresinde bükülüyor; ortadaki karanlık, ışığın kaçamadığı gölge.",
   "card.sgra": "Kütle 4,297 milyon M☉ (GRAVITY 2022) · ışık bükülmesi Schwarzschild çözümünden hesaplanır · disk ve arka plan temsili",

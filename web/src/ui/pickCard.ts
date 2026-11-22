@@ -1,4 +1,5 @@
 import { el, show } from "./hud";
+import { annotateInto } from "./glossary";
 import { t } from "./i18n";
 
 export interface PickInfo {
@@ -52,10 +53,10 @@ export class PickCard {
   }
 
   open(info: PickInfo) {
-    this.title.textContent = info.title;
-    this.sub.textContent = info.subtitle ?? "";
+    annotateInto(this.title, info.title);
+    annotateInto(this.sub, info.subtitle ?? "");
     this.sub.style.display = info.subtitle ? "" : "none";
-    this.body.replaceChildren(...info.lines.map(l => el("div", "", l)));
+    this.body.replaceChildren(...info.lines.map(l => { const d = el("div", ""); annotateInto(d, l); return d; }));
     this.links.replaceChildren(...(info.links ?? []).map(l => {
       const b = el("button", "pick-link", `${l.text} ›`);
       b.addEventListener("click", l.onClick);
@@ -64,7 +65,7 @@ export class PickCard {
     this.links.style.display = info.links?.length ? "" : "none";
     this.note.replaceChildren();
     if (info.note) {
-      el("div", "", info.note.text, this.note);
+      annotateInto(el("div", "", undefined, this.note), info.note.text);
       if (navigator.onLine) {
         const src = el("div", "pick-src", undefined, this.note);
         info.note.sources.forEach((s, i) => {

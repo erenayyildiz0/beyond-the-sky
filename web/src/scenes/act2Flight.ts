@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { annotateInto } from "../ui/glossary";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { loadCosmic, loadDataTexture, loadDetail, loadEarthTexture, loadSmallBodies } from "../app/assets";
@@ -405,7 +406,7 @@ export class Act2Flight implements Scene {
   private missions: MissionsUi | null = null;
   private flyTarget: Target | null = null;
   private ui!: {
-    stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
+    stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string; con?: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
     root: HTMLElement; lightVal: HTMLElement; dist: HTMLElement; ruler: Ruler; hint: HTMLElement; hint2: HTMLElement; controls: HTMLElement;
     labels: HTMLElement; lblEarth: HTMLElement; lblSolar: HTMLElement; lblBelts: HTMLElement; lblBh: HTMLElement; lblStars: HTMLElement; lblExposure: HTMLElement;
@@ -480,7 +481,8 @@ export class Act2Flight implements Scene {
     // Tarih çapası (EXTRAS T1): bu uzaklıktan gelen ışık yola çıktığında Dünya'da ve uzayda ne oluyordu
     this.histLine = el("button", "history-line", "", light);
     this.histLine.addEventListener("click", () => this.openHistory(this.histEvents, this.histLookback));
-    const ruler = new Ruler(root, this.w.stops.map(s => ({ key: s.key, z: s.z })), s => this.goStop(this.w.stops.findIndex(x => x.key === s.key)));
+    const ruler = new Ruler(root, this.w.stops.map(s => ({ key: s.key, z: s.z })), s => this.goStop(this.w.stops.findIndex(x => x.key === s.key)),
+      z => this.flyToZ(z), z => this.describeZ(z));
     show(ruler.root);
     const hint = el("div", "fly-hint", t("act2.ascend"), root);
     const hint2 = el("div", "fly-hint", t("act2.freeHint"), root);
@@ -497,6 +499,7 @@ export class Act2Flight implements Scene {
     };
     mk(t("act2.backward"), -1);
     mk(t("act2.forward"), 1);
+    if (!this.moved) this.btnLabels[1]?.classList.add("cta");              // ilk uçuşa kadar "İleri/Yüksel" parlar
     const extra = el("div", "fly-extra on", undefined, root);
     const left = el("div", "fly-left", undefined, extra);
     const home = el("button", "fly-small", t("act2.lookHome"), left);
@@ -527,12 +530,13 @@ export class Act2Flight implements Scene {
     const lblZoa = el("div", "layer-label", t("label.zoa"), labels);
     const lblWeb = el("div", "layer-label", t("label.web"), labels);
     const lblCmb = el("div", "layer-label", t("label.cmb"), labels);
+    for (const e of [cosmoNote, ...labels.children] as HTMLElement[]) annotateInto(e, e.textContent ?? "");   // terimler dokunulabilir
     const order = ["cl:virgo", "cl:coma", "cl:fornax", "cl:perseus", "cl:centaurus", "cl:hydra", "cl:norma", "cl:shapley", "mw", "sgra", "s2", "m31", "m33", "lmc", "smc", "moon", "sun", "jupiter", "saturn", "voyager", "neptune", "uranus", "venus", "mars", "mercury"];
     const bodyLabels = this.w.bodies.filter(b => b.kind !== "earth")
       .sort((a, b) => order.indexOf(a.key) - order.indexOf(b.key))
       .map(b => ({ b, e: el("div", "body-label", b.name, root) }));
     const stopCard = new StopCard(root);
-    const toBirth = el("button", "next-btn to-birth", `${t("act2.toBirth")} ›`, root);
+    const toBirth = el("button", "next-btn to-birth cta", `${t("act2.toBirth")} ›`, root);
     toBirth.addEventListener("click", () => this.openBirth());
     const birth = el("div", "birth-panel", undefined, root);
     el("div", "birth-ask poem", t("act3.ask"), birth);
@@ -540,7 +544,7 @@ export class Act2Flight implements Scene {
     yr.type = "number"; yr.inputMode = "numeric"; yr.min = "1900"; yr.max = String(Math.floor(this.ctx.assets.sky.meta.obs_year_frac));
     if (this.ctx.params.born) yr.value = String(this.ctx.params.born);
     const brow = el("div", "pick-actions", undefined, birth);
-    const go = el("button", "pick-fly", t("act3.show"), brow);
+    const go = el("button", "pick-fly cta", t("act3.show"), brow);
     const skip = el("button", "", t("act3.skip"), brow);
     el("div", "birth-private", t("act3.private"), birth);
     go.addEventListener("click", () => this.startReturn(+yr.value || null));
@@ -960,6 +964,38 @@ export class Act2Flight implements Scene {
     this.ascentAuto = true;                                    // inince İleri yine yukarı götürür ("Yukarı çık")
   }
 
+  /** Cetvelde bir uzaklık: iki komşu durağın arasında, uzaklığın logaritmasına göre ara konum ve bakış */
+  private pointAtZ(z: number) {
+    const st = [...this.w.stops].sort((a, b) => a.z - b.z);
+    const d = 10 ** z;
+    if (z <= st[0].z) {                                          // Dünya durağının altı: Ankara'nın tam üstü
+      return { pos: new THREE.Vector3(0, Math.max(d, 1), 0), look: st[0].look.clone() };
+    }
+    const hi = st.findIndex(x => x.z >= z);
+    if (hi < 0) { const L = st[st.length - 1]; return { pos: L.pos.clone().setLength(d), look: L.look.clone() }; }
+    const a = st[hi - 1], b = st[hi], k = (z - a.z) / Math.max(b.z - a.z, 1e-9);
+    const dir = slerpDir(a.pos.clone().normalize(), b.pos.clone().normalize(), k);
+    return { pos: dir.multiplyScalar(d), look: slerpDir(a.look.clone(), b.look.clone(), k) };
+  }
+
+  private flyToZ(z: number) {
+    if (this.phase === "return") return;
+    const { pos, look } = this.pointAtZ(z);
+    const plan = pointPlan(this.C, pos);
+    this.ui.card.hide();
+    this.plan = { t: 0, turnS: 0, dur: plan.dur * motionScale(), at: plan.at, q0: this.q.clone(), q1: this.quatFor(look, pos) };
+    this.planEndLook = null; this.flyTarget = null; this.stopIdx = -1;
+    this.ascentAuto = false; this.moved = true;
+  }
+
+  /** Cetvel sürüklenirken etiket: uzaklık ve yakındaki durak */
+  private describeZ(z: number) {
+    const lang = getLang(), km = 10 ** z, ly = km / LY_KM;
+    const dist = ly >= 0.01 ? `${fmtLy(ly, lang)} ${t("act2.ly")}` : fmtKm(km, lang);
+    const near = this.w.stops.reduce((b, x) => (Math.abs(x.z - z) < Math.abs(b.z - z) ? x : b));
+    return Math.abs(near.z - z) < 0.25 ? `${dist} · ${t("ruler.around", { stop: t(`ruler.${near.key}` as "ruler.earth") })}` : dist;
+  }
+
   private flyTo(tg: Target) {
     if (this.phase === "return") return;                    // A3_RETURN otomatik; kullanıcı hedefi değiştiremez
     this.ui.card.hide();
@@ -1049,7 +1085,7 @@ export class Act2Flight implements Scene {
     this.wheelT = Math.max(-1.5, Math.min(1.5, this.wheelT * Math.exp(-dt / 0.35) + dz * 4));
     if (Math.abs(this.wheelT) < 0.02) this.wheelT = 0;
     const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle + this.wheelT));
-    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; this.ui.card.hide(); this.tipDone("fly"); }
+    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; this.ui.card.hide(); this.tipDone("fly"); this.btnLabels[1]?.classList.remove("cta"); }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
     const sInfo = this.nearStar.i >= 0 ? this.starInfo(this.nearStar.i) : null;
@@ -1486,10 +1522,13 @@ export class Act2Flight implements Scene {
       if (z < 12.3 || z > 16.5 || Math.abs(_v.x) > 0.95 || Math.abs(_v.y) > 0.95) continue;
       const dCam = Math.hypot(px - cx, py - cy, pz - cz);
       if (dCam < 0.05 || (i === this.nearStar.i && this.w.state.starW > 0.1) || apparentMag(sky.starMag[i], dly, dCam) > mLim - 0.5) continue;
-      if (!L.text) {                                                         // metin değişmez: bir kez üret
+      const det = this.w.detail;
+      if (!L.text || (det && !L.con)) {                                      // metin değişmez: bir kez (takımyıldız gelince bir kez daha) üret
         const ll = lightLeft(dly, sky.meta.obs_year_frac);
         const dist = fmtDec(dly, dly < 100 ? 1 : 0, lang);
-        const name = sky.starName(i) ?? "";
+        // Tanıdık olmayan adlar için takımyıldızın adı: "Alnilam (Avcı)"
+        L.con = det ? conName(det.con[i], getLang()) : "";
+        const name = `${sky.starName(i) ?? ""}${L.con ? ` (${L.con})` : ""}`;
         L.text = ll.bc ? t("act2.label.bc", { name, dist, bc: ll.bc })
           : ll.approx ? t("act2.label.approx", { name, dist, yıl_de: trLocative(ll.year), year: ll.year })
           : t("act2.label.star", { name, dist, yıl_de: trLocative(ll.year), year: ll.year });

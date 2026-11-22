@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { annotateInto } from "../ui/glossary";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { frameSkyCamera, hFovDeg, SkyLook } from "../app/look";
@@ -60,7 +61,7 @@ export class Act3Birth implements Scene {
     } else this.star = null;
 
     const root = el("div", "act3", undefined, ctx.hud);
-    const textEl = el("div", "act3-text poem", text, root);
+    const textEl = el("div", "act3-text poem", undefined, root);
     const ring = el("div", "birth-ring", undefined, root);
     const arrow = el("div", "birth-arrow", "➜", root);
     const lights = el("div", "act3-text poem", t("act3.lights"), root);
@@ -69,7 +70,7 @@ export class Act3Birth implements Scene {
     const l2 = el("div", "outro-line poem", t("outro.line2"), outro);
     const logo = el("div", "outro-logo", "Beyond the Sky", outro);
     const btns = el("div", "outro-btns", undefined, outro);
-    const ex = el("button", "next-btn-inline", `${t("outro.explore")} ›`, btns);
+    const ex = el("button", "next-btn-inline cta", `${t("outro.explore")} ›`, btns);
     ex.addEventListener("click", () => { ctx.shared = { explore: true, birth: ctx.shared.birth }; ctx.director.go("act2"); });   // Git → Senin yıldızın
     const restart = () => { ctx.shared = {}; ctx.director.go("intro"); };          // doğum yılı bellekten silinir
     el("button", "fly-small", t("outro.restart"), btns).addEventListener("click", restart);
@@ -78,7 +79,7 @@ export class Act3Birth implements Scene {
     src.addEventListener("click", () => { ctx.director.setState("CREDITS"); show(creditsEl, true); });
     this.ui = { root, text: textEl, ring, arrow, lights, outro, l1, l2, logo, btns, creditsEl };
     ctx.audio?.swell();                                          // A3_LAND
-    if (ctx.gyro.active && this.star != null) textEl.textContent += " " + t("act3.turn");
+    annotateInto(textEl, ctx.gyro.active && this.star != null ? `${text} ${t("act3.turn")}` : text);
     requestAnimationFrame(() => show(textEl, !!text));
   }
 
