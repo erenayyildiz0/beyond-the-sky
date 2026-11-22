@@ -408,3 +408,13 @@ button { font: inherit; color: inherit; }
   .compare-bar .fly-btn { white-space: nowrap; font-size: var(--size-small); height: 52px; }
   .compare-bar { bottom: calc(52px + var(--safe-b)); }
 }
+
+/* E2 dar ekran (telefon dikey): araçlar üstte tek sıra, etiket "Geri"nin yanına, sayaç aşağıda — basılı tut ve jiroskop anahtarıyla çakışmasın */
+.own-edit .badge { left: 84px; right: 12px; max-width: none; }
+@media (max-width: 600px) {
+  .own-edit .badge { font-size: 9px; }
+  .own-tools { top: calc(64px + var(--safe-t)); bottom: auto; left: 12px; right: 12px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .own-shift { flex-direction: row; align-items: center; }
+  .own-shift input { width: 110px; }
+  .own-edit .count { top: 20%; font-size: calc(var(--size-count) * .8); }
+}

@@ -4,7 +4,7 @@ import { bindHoldButton, HoldControl, type Action } from "../app/input";
 import { T } from "../app/timeline";
 import { dirFromAltAz } from "../science/coords";
 import { countVisible } from "../science/visibility";
-import { buildMask, luminance, PHONE_LONG_FOV_DEG, skylineFromLuminance, verticalFov } from "../science/photoMask";
+import { autoOrient, buildMask, luminance, PHONE_LONG_FOV_DEG, quarterTurnsFromUp, skylineFromLuminance, verticalFov } from "../science/photoMask";
 import { fmtInt } from "../ui/format";
 import { el, progressRing, show } from "../ui/hud";
 import { getLang, t } from "../ui/i18n";
@@ -101,6 +101,7 @@ export class OwnSky implements Scene {
     const shift = el("input", "", undefined, shiftL);
     shift.type = "range"; shift.min = "-0.25"; shift.max = "0.25"; shift.step = "0.002"; shift.value = "0";
     shift.addEventListener("input", () => { this.overlay.material.uniforms.uShift.value = -(+shift.value); });
+    el("button", "fly-small", `↻ ${t("own.rotate")}`, tools).addEventListener("click", () => this.rotateManual());
     el("button", "fly-small", t("own.retake"), tools).addEventListener("click", () => { this.reset(); this.startCamera(); });
     el("button", "fly-small", t("card.share"), tools).addEventListener("click", () => {
       shareFrame(this.ctx.renderer.domElement, () => this.render(this.ctx.renderer), t("own.shareText")).catch(e => console.warn(e));
@@ -127,45 +128,86 @@ export class OwnSky implements Scene {
     this.video.srcObject = null;
   }
 
-  /** Çek: o anki kare ve telefonun yönelimi; ardından maske. Hepsi bellekte. */
+  /** Çek: o anki kare ve telefonun yönelimi; fotoğraf dik konuma çevrilir, ardından maske. Hepsi bellekte. */
   private capture() {
     const v = this.video;
     if (!v.videoWidth) return;
     const W = v.videoWidth, H = v.videoHeight;
-    const full = document.createElement("canvas");
+    let full = document.createElement("canvas");
     full.width = W; full.height = H;
     full.getContext("2d")!.drawImage(v, 0, 0, W, H);
     const g = this.ctx.gyro;
-    if (g.active) this.q0.copy(g.q);
-    else {                                                // jiroskop yok: bu gecenin başlangıç yönü, ufkun biraz üstü
+    this.gyroUsed = g.active;
+    let k: number;
+    if (g.active) {
+      // Başucunun kamera düzlemindeki izdüşümü: telefon yan tutulduysa (ekran döndürmesi kilitli) görüntünün yukarısı başka kenarda
+      this.q0.copy(g.q);
+      const up = new THREE.Vector3(0, 1, 0).applyQuaternion(this.q0.clone().invert());
+      k = quarterTurnsFromUp(up.x, up.y);
+    } else {                                              // jiroskop yok: bu gecenin başlangıç yönü, ufkun biraz üstü
       const view = this.ctx.assets.sky.meta.view;
       const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), dirFromAltAz(20, view.az_deg), new THREE.Vector3(0, 1, 0));
       this.q0.setFromRotationMatrix(m);
+      const sm = this.smallLum(full);
+      k = autoOrient(sm.L, sm.w, sm.h);                   // gökyüzünün pürüzsüz ve parlak kenarı yukarı
     }
     this.stopCamera();
-    // Maske küçük kopyada (en fazla 480 px)
-    const s = Math.min(1, 480 / Math.max(W, H)), w = Math.round(W * s), h = Math.round(H * s);
+    if (k) full = this.turn(full, k, this.gyroUsed);
+    this.hold.p = 0; this.hold.locked = false; this.yaw = 0; this.pitch = 0; this.fovLong = PHONE_LONG_FOV_DEG;
+    this.setPhoto(full);
+    show(this.ui.shoot, false); show(this.ui.edit, true);
+  }
+
+  private gyroUsed = false;
+  private canvas: HTMLCanvasElement | null = null;
+
+  /** Fotoğrafı saat yönünün tersine k çeyrek tur döndür; jiroskop yönelimi kullanıldıysa gökyüzü kamerası da aynı açıyla döner */
+  private turn(src: HTMLCanvasElement, k: number, withCamera: boolean) {
+    let c = src;
+    for (let i = 0; i < k; i++) {
+      const n = document.createElement("canvas");
+      n.width = c.height; n.height = c.width;
+      const x = n.getContext("2d")!;
+      x.translate(0, n.height); x.rotate(-Math.PI / 2); x.drawImage(c, 0, 0);   // sağ kenar yukarı
+      c = n;
+    }
+    if (withCamera) this.q0.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -k * Math.PI / 2));
+    return c;
+  }
+
+  /** Maske için küçük kopyanın parlaklığı (en fazla 480 px) */
+  private smallLum(src: HTMLCanvasElement) {
+    const s = Math.min(1, 480 / Math.max(src.width, src.height)), w = Math.round(src.width * s), h = Math.round(src.height * s);
     const small = document.createElement("canvas");
     small.width = w; small.height = h;
     const sc = small.getContext("2d", { willReadFrequently: true })!;
-    sc.drawImage(full, 0, 0, w, h);
-    const L = luminance(sc.getImageData(0, 0, w, h).data, w, h);
+    sc.drawImage(src, 0, 0, w, h);
+    return { L: luminance(sc.getImageData(0, 0, w, h).data, w, h), w, h };
+  }
+
+  private setPhoto(full: HTMLCanvasElement) {
+    this.canvas = full;
+    const { L, w, h } = this.smallLum(full);
     const mask = buildMask(L, w, h, skylineFromLuminance(L, w, h));
     const mtex = new THREE.DataTexture(mask.data, w, h, THREE.RGBAFormat);
     mtex.magFilter = THREE.LinearFilter; mtex.minFilter = THREE.LinearFilter; mtex.needsUpdate = true;
     const ptex = new THREE.CanvasTexture(full);
     ptex.colorSpace = THREE.SRGBColorSpace;
     this.photo?.tex.dispose(); this.photo?.mask.dispose();
-    this.photo = { tex: ptex, mask: mtex, w: W, h: H };
+    this.photo = { tex: ptex, mask: mtex, w: full.width, h: full.height };
     const u = this.overlay.material.uniforms;
     u.uPhoto.value = ptex; u.uMask.value = mtex;
-    this.hold.p = 0; this.hold.locked = false; this.yaw = 0; this.pitch = 0; this.fovLong = PHONE_LONG_FOV_DEG;
     this.ui.shift.value = "0"; u.uShift.value = 0;
-    show(this.ui.shoot, false); show(this.ui.edit, true);
+  }
+
+  /** ↻ Döndür: yön tahmini yanlışsa elle */
+  private rotateManual() {
+    if (!this.canvas) return;
+    this.setPhoto(this.turn(this.canvas, 1, this.gyroUsed));
   }
 
   private reset() {
-    this.photo?.tex.dispose(); this.photo?.mask.dispose(); this.photo = null;
+    this.photo?.tex.dispose(); this.photo?.mask.dispose(); this.photo = null; this.canvas = null;
   }
 
   onAction(a: Action) {

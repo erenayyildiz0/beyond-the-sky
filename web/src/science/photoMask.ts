@@ -72,3 +72,47 @@ export function verticalFov(longFovDeg: number, aspect: number) {
   const t = Math.tan(longFovDeg * Math.PI / 360) / aspect;
   return 2 * Math.atan(t) * 180 / Math.PI;
 }
+
+/** Parlaklık dizisini saat yönünün tersine k çeyrek tur döndür (k = 0..3) */
+export function rotateLum(L: Float32Array, w: number, h: number, k: number): { L: Float32Array; w: number; h: number } {
+  k = ((k % 4) + 4) % 4;
+  if (!k) return { L, w, h };
+  const nw = k % 2 ? h : w, nh = k % 2 ? w : h, out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    // CCW 90: (x, y) → (y, w−1−x); 180: (w−1−x, h−1−y); CCW 270: (h−1−y, x)
+    const [nx, ny] = k === 1 ? [y, w - 1 - x] : k === 2 ? [w - 1 - x, h - 1 - y] : [h - 1 - y, x];
+    out[ny * nw + nx] = L[y * w + x];
+  }
+  return { L: out, w: nw, h: nh };
+}
+
+/**
+ * Jiroskop yoksa yön tahmini: doğru yönde neredeyse her sütun "üstte gökyüzü, altta zemin"dir; ufuk çizgisi sütunun içine düşer.
+ * Yan ya da ters dönmüş görüntüde sütunlar baştan sona gökyüzü ya da baştan zemin olur. Skor: ufku %5–95 arasında olan ve
+ * ufkun üstü altından parlak olan sütunların oranı. En yüksek skoru veren çeyrek tur; belirgin fark yoksa 0 (döndürme).
+ */
+export function autoOrient(L: Float32Array, w: number, h: number) {
+  const score = [0, 1, 2, 3].map(k => {
+    const r = rotateLum(L, w, h, k), sk = skylineFromLuminance(r.L, r.w, r.h);
+    let n = 0;
+    sk.forEach((v, x) => {
+      if (v <= 0.05 * r.h || v >= 0.95 * r.h) return;
+      let up = 0, dn = 0;                                        // gökyüzü (gece de gündüz de) zeminden parlaktır
+      for (let y = 0; y < r.h; y++) { if (y < v) up += r.L[y * r.w + x]; else dn += r.L[y * r.w + x]; }
+      if (up / v > dn / (r.h - v)) n++;
+    });
+    return n / sk.length;
+  });
+  const best = score.indexOf(Math.max(...score));
+  return score[best] > score[0] + 0.15 ? best : 0;
+}
+
+/**
+ * Jiroskopla yön: başucunun (dünyanın yukarısı) kamera düzlemindeki izdüşümü (ux sağa, uy yukarı) görüntünün hangi kenarını
+ * gösteriyorsa o kenar yukarı gelecek şekilde saat yönünün tersine çeyrek tur sayısı. Telefon ekran döndürmesi kilitliyken
+ * yan tutularak çekilen fotoğraf böylece dik olur.
+ */
+export function quarterTurnsFromUp(ux: number, uy: number) {
+  const k = Math.round(Math.atan2(ux, uy) / (Math.PI / 2));
+  return ((k % 4) + 4) % 4;
+}
