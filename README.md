@@ -1,112 +1,117 @@
 # Beyond the Sky
 
+**English** · [Türkçe](README.tr.md)
+
 *The universe is closer than you think.*
 
-**Beyond the Sky**, şehir ışıklarının bizden neyi sakladığını gösteren etkileşimli bir web deneyimi. Ankara'nın gerçek gece
-gökyüzünden başlıyor; ışıkları söndürünce görünmez olan yıldızlar, Samanyolu ve Andromeda beliriyor. Ardından çatıdan kalkıp
-Güneş Sistemi'nin, yakın yıldızların ve galaksilerin arasından gözlemlenebilir evrenin sınırına kadar uçuluyor.
+**Beyond the Sky** is an interactive web experience about what city lights hide from us. It starts with the real night sky
+over Ankara; turn off the lights and the stars, the Milky Way and Andromeda that were invisible all along appear. Then you take
+off from the rooftop and fly past the Solar System, the nearby stars and the galaxies, all the way to the edge of the
+observable universe.
 
-Gökyüzündeki her yıldızın konumu, uzaklığı ve parlaklığı gerçek katalog verisinden hesaplanıyor. Temsili olan her şey ekranda
-öyle etiketleniyor.
+Every star's position, distance and brightness is computed from real catalogue data. Anything illustrative is labelled as
+such on screen.
 
-🔭 **Canlı:** [erenayyildiz0.github.io/beyond-the-sky](https://erenayyildiz0.github.io/beyond-the-sky/) · Telefonda en iyi
-deneyim için jiroskobu açıp telefonu gökyüzüne çevirin.
+🔭 **Live:** [erenayyildiz0.github.io/beyond-the-sky](https://erenayyildiz0.github.io/beyond-the-sky/) · On a phone, turn on
+the gyroscope and point your phone at the sky for the best experience. Add `?lang=en` for the English interface.
 
-## Özellikler
+## Features
 
-### Üç perde
+### Three acts
 
-1. **Işıkları Söndür:** 29 Kasım 2026, 21:00, Kızılay. Şehirden görülen 111 yıldız. Basılı tutunca ışıklar söner ve karanlık
-   bir gökyüzünde görülecek 3.189 yıldız, Samanyolu ve Andromeda belirir.
-2. **Yolculuk:** Çatıdan kesintisiz kalkış; Dünya, Ay, Güneş Sistemi, Voyager 1, yakın yıldızlar, Samanyolu, Yerel Grup,
-   galaksi kümeleri, kozmik ağ ve kozmik mikrodalga arka planı. Serbest uçuş, rehberli duraklar, uzaklık cetveli ve her
-   cisme dokunup "Buraya uç". Işık sayacı, o uzaklıktan gelen ışık yola çıktığında Dünya'da ve uzayda ne olduğunu gösterir.
-3. **Senin Işığın:** Doğum yılını girersen, ışığı tam o yıl yola çıkıp bu gece Dünya'ya varan yıldızı bulur ve seni eve, o
-   yıldızın altına geri götürür.
+1. **Lights Out:** 29 November 2026, 9 pm, Kızılay, Ankara. 111 stars visible from the city. Press and hold, the lights go
+   out, and the 3,189 stars, the Milky Way and Andromeda you would see under a dark sky appear.
+2. **The Journey:** A seamless take-off from the rooftop past Earth, the Moon, the Solar System, Voyager 1, nearby stars, the
+   Milky Way, the Local Group, galaxy clusters, the cosmic web and the cosmic microwave background. Free flight, guided
+   stops, a distance ruler, and "Fly here" on any object you tap. The light counter shows what was happening on Earth and in
+   space when the light from that distance set out.
+3. **Your Light:** Enter your birth year and it finds the star whose light set out the year you were born and arrives on Earth
+   tonight, then takes you home to stand beneath it.
 
-### Keşif modu
+### Explore mode
 
-Hikâye bittikten sonra süresiz serbest keşif: yıldız ve galaksi bilgi kartları, arama, hızlı gitme menüsü, 7 görev ve
-paylaşım. **Boyutlar** ekranında pulsardan M87* kara deliğine kadar gök cisimleri gerçek boyutlarıyla yan yana durur.
+Open-ended free exploration after the story: info cards for stars and galaxies, search, a quick "Go to" menu, 7 missions and
+sharing. The **Sizes** screen puts objects side by side at true scale, from a pulsar to the M87* black hole.
 
-### Kendi gökyüzün
+### Your own sky
 
-- **Konumumu kullan:** Gökyüzü, cihazın konumu için tarayıcıda yeniden hesaplanır. Ay'ın batmış olduğu ilk karanlık gece
-  seçilir; ışık kirliliği şehir merkezi, banliyö ya da kırsal olarak ayarlanır.
-- **Fotoğrafla:** Uygulamanın içinden gökyüzüne bir fotoğraf çekersin. Basılı tutunca fotoğraftaki ışıklar söner ve o yönde
-  o gece görünecek gerçek yıldızlar ve Samanyolu, fotoğraftaki gökyüzünün yerine belirir.
+- **Use my location:** The sky is recomputed in the browser for the device's location. The first dark, moonless night is
+  chosen, and light pollution is set as city centre, suburb or countryside.
+- **From a photo:** Take a photo of the sky from inside the app. Press and hold, the lights in your photo go out, and the real
+  stars and Milky Way visible in that direction that night replace the sky in your photo.
 
-### Diğer
+### Also
 
-- Türkçe ve İngilizce arayüz.
-- Kadir, ışık yılı, Sgr A* gibi terimler noktalı altı çizili; dokununca sade bir açıklama açılır.
-- Azaltılmış hareket tercihi, uyarlamalı çözünürlük, sunum kumandası desteği.
-- Çalışma anında hiçbir dış ağ isteği yapılmaz; internetsiz de çalışır.
+- Turkish and English interface.
+- Terms such as magnitude, light-year or Sgr A* are underlined with dots; tap for a plain-language explanation.
+- Reduced-motion support, adaptive resolution and presentation-remote support.
+- No external network requests at runtime; it works offline.
 
-## Nasıl çalışıyor?
+## How it works
 
-Proje iki parçadan oluşur:
+The project has two parts:
 
-- **Veri hattı (`pipeline/`, Python):** HYG yıldız kataloğu, NASA görüntüleri ve galaksi katalogları Astropy ile işlenir.
-  Gözlem gecesi seçilir, yıldızların ufuk koordinatları ve hangilerinin şehirden ya da karanlık bir yerden görülebileceği
-  hesaplanır. Sonuçlar `web/public/data/` altına JSON, ikili dosya ve doku olarak yazılır ve repoya dahildir.
-- **Web uygulaması (`web/`, TypeScript + three.js):** Bu verileri okuyup gökyüzünü, uçuşu ve evren ölçeğindeki katmanları
-  tarayıcıda çizer. Konum değiştiğinde gökyüzü astronomy-engine ile yeniden hesaplanır.
+- **Data pipeline (`pipeline/`, Python):** The HYG star catalogue, NASA imagery and galaxy catalogues are processed with
+  Astropy. It picks the observing night, computes horizon coordinates for every star and works out which ones are visible from
+  the city and from a dark site. The results are written to `web/public/data/` as JSON, binary files and textures, and are
+  committed to the repository.
+- **Web app (`web/`, TypeScript + three.js):** Reads that data and renders the sky, the flight and the universe-scale layers in
+  the browser. When the location changes, the sky is recomputed with astronomy-engine.
 
-Görünürlük modeli (çıplak göz limit kadiri ↔ gökyüzü parlaklığı, Schaefer 1990) Python, TypeScript ve GLSL tarafında aynı
-formüllerle uygulanır ve testlerle birbirine karşı doğrulanır.
+The visibility model (naked-eye limiting magnitude ↔ sky brightness, Schaefer 1990) is implemented with the same formulas in
+Python, TypeScript and GLSL, and the three are tested against each other.
 
-## Teknolojiler
+## Tech stack
 
-| Katman | Kullanılanlar |
+| Layer | Tools |
 |---|---|
 | Web | TypeScript, three.js, GLSL, Vite, Vitest, astronomy-engine |
-| Veri hattı | Python 3.11+, Astropy, NumPy, pandas, Pillow, OpenEXR, pytest |
-| Yayın | GitHub Actions → GitHub Pages |
+| Data pipeline | Python 3.11+, Astropy, NumPy, pandas, Pillow, OpenEXR, pytest |
+| Deployment | GitHub Actions → GitHub Pages |
 
-## Proje yapısı
+## Project structure
 
 ```
 beyond-the-sky/
-├── pipeline/            # Python veri hattı
-│   ├── bts/             # katalog, gökyüzü, görünürlük, uçuş rotası, galaksiler, dokular
+├── pipeline/            # Python data pipeline
+│   ├── bts/             # catalogue, sky, visibility, flight path, galaxies, textures
 │   ├── tests/
-│   ├── build.py         # tüm veriyi üretir
-│   └── config.yaml      # konum, tarih, SQM ve katalog ayarları
-├── web/                 # tarayıcı uygulaması
+│   ├── build.py         # builds all data
+│   └── config.yaml      # location, date, SQM and catalogue settings
+├── web/                 # browser app
 │   ├── src/
-│   │   ├── app/         # yönetmen, girdi, jiroskop, kamera
-│   │   ├── scenes/      # perdeler ve Keşif
-│   │   ├── render/      # gökyüzü, yıldızlar, gezegenler, galaksiler, kozmik ağ
-│   │   ├── science/     # koordinatlar, görünürlük, sabitler, konuma göre yeniden hesaplama
-│   │   ├── content/     # bilgi kartları, sözlük, tarih çapaları, kaynakça
-│   │   ├── ui/          # paneller ve kontroller
-│   │   └── i18n/        # Türkçe ve İngilizce metinler
-│   ├── public/data/     # veri hattının çıktıları
+│   │   ├── app/         # director, input, gyroscope, camera
+│   │   ├── scenes/      # acts and Explore
+│   │   ├── render/      # sky, stars, planets, galaxies, cosmic web
+│   │   ├── science/     # coordinates, visibility, constants, relocation
+│   │   ├── content/     # info cards, glossary, history anchors, credits
+│   │   ├── ui/          # panels and controls
+│   │   └── i18n/        # Turkish and English strings
+│   ├── public/data/     # pipeline output
 │   └── tests/
-├── docs/                # tasarım belgesi, ekler, demo akışı
-└── .github/workflows/   # GitHub Pages yayını
+├── docs/                # design document, extras, demo script
+└── .github/workflows/   # GitHub Pages deployment
 ```
 
-## Başlarken
+## Getting started
 
-### Web uygulaması
+### Web app
 
-Veri hattının çıktıları repoda olduğu için uygulamayı çalıştırmak için Python gerekmez. Node.js 24 önerilir.
+The pipeline output is in the repository, so you don't need Python to run the app. Node.js 24 is recommended.
 
 ```bash
 cd web
 npm install
 npm run dev          # http://localhost:5173
-npm run dev:https    # telefonda jiroskop denemek için (aynı ağda, HTTPS)
+npm run dev:https    # to test the gyroscope on a phone (same network, HTTPS)
 npm test
-npm run build        # çıktı: web/dist
-npm run preview      # derlenmiş sürümü yerelde aç
+npm run build        # output: web/dist
+npm run preview      # serve the production build locally
 ```
 
-### Veri hattı (isteğe bağlı)
+### Data pipeline (optional)
 
-Veriyi yeniden üretmek ya da ayarları (tarih, konum, katalog sınırı) değiştirmek için:
+To regenerate the data or change the settings (date, location, catalogue limit):
 
 ```bash
 cd pipeline
@@ -117,119 +122,137 @@ python build.py --config config.yaml
 pytest -q
 ```
 
-Gerekli katalog ve görüntü dosyaları ilk çalıştırmada `pipeline/raw/` içine otomatik indirilir (bu klasör git'e girmez).
-Black Marble gece görüntüsü indirilemezse `build.py` dosyanın elle nereden alınacağını yazar. Şehir gökyüzü parlaklığı (SQM)
-`config.yaml` içindeki `sqm_city` değeridir.
+The required catalogue and image files are downloaded into `pipeline/raw/` on the first run (this folder is not committed).
+If the Black Marble night image can't be downloaded, `build.py` tells you where to get it manually. The city sky brightness
+(SQM) is `sqm_city` in `config.yaml`.
 
-### Yayın
+### Deployment
 
-`main` dalına yapılan her push'ta [`.github/workflows/pages.yml`](.github/workflows/pages.yml) testleri çalıştırır, uygulamayı
-derler ve GitHub Pages'e yayınlar. Repo ayarlarında **Settings → Pages → Source: GitHub Actions** seçili olmalıdır.
+On every push to `main`, [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs the tests, builds the app and
+deploys it to GitHub Pages. In the repository settings, **Settings → Pages → Source** must be set to **GitHub Actions**.
 
-## Kullanım
+## Usage
 
-### Klavye
+### Keyboard
 
-| Tuş | İşlev |
+| Key | Action |
 |---|---|
-| `Space` (basılı tut) | Işıkları söndür |
-| `Enter` / `PageDown` | Sonraki durak |
-| `Backspace` / `PageUp` | Önceki durak |
-| `B` | Arkana bak |
-| `F` | Tam ekran |
-| `M` | Sesi kapat/aç |
-| `R` | Baştan başla |
-| `D` | Bilim paneli |
+| `Space` (hold) | Turn off the lights |
+| `Enter` / `PageDown` | Next stop |
+| `Backspace` / `PageUp` | Previous stop |
+| `B` | Look back |
+| `F` | Full screen |
+| `M` | Mute / unmute |
+| `R` | Restart |
+| `D` | Science panel |
 
-### URL parametreleri
+### URL parameters
 
-| Parametre | Etkisi |
+| Parameter | Effect |
 |---|---|
-| `?lang=en` | İngilizce arayüz |
-| `?az=295` | Perde 1'in başlangıç yönü (derece) |
-| `?debug=1` | Bilim paneli açık |
-| `?z=15.3` | Perde 2'yi bu ölçekten başlat |
-| `?goto=m31` | Bir durağa ya da cisme git (yıldız için `hip:27989`) |
-| `?born=2007` | Perde 3'ü bu doğum yılıyla dene |
-| `?explore=1` | Doğrudan Keşif moduna gir |
-| `?compare=1` | Boyutlar ekranını aç |
-| `?autoplay=1` | Baştan sona kendiliğinden oynat (ekran kaydı için) |
-| `?presenter=1` | Otomatik geçişler kapalı, sunum kumandasıyla ilerle |
+| `?lang=en` | English interface |
+| `?az=295` | Starting direction in Act 1 (degrees) |
+| `?debug=1` | Science panel open |
+| `?z=15.3` | Start Act 2 at this scale |
+| `?goto=m31` | Go to a stop or object (for a star: `hip:27989`) |
+| `?born=2007` | Try Act 3 with this birth year |
+| `?explore=1` | Go straight to Explore mode |
+| `?compare=1` | Open the Sizes screen |
+| `?autoplay=1` | Play from start to finish on its own (for screen recording) |
+| `?presenter=1` | Automatic transitions off; advance with a presentation remote |
 
-Canlı sunum için konuşma akışı ve yedek plan: [docs/DEMO.md](docs/DEMO.md).
+Talk track and backup plan for a live demo: [docs/DEMO.md](docs/DEMO.md) (in Turkish).
 
-## Gizlilik
+## Privacy
 
-Doğum yılı yalnızca bellekte tutulur, hiçbir yere yazılmaz ve gönderilmez; "Baştan başla" ile silinir. Telefonun yönelimi,
-konumu ve çekilen fotoğraf cihazdan çıkmaz, kaydedilmez. Çalışma anında dış ağ isteği yoktur; fontlar, veriler ve görseller yereldir. Cihazda yalnızca hikâyenin
-izlendiği, ipuçlarının görüldüğü ve tamamlanan görevler saklanır (kişisel veri değil). Paylaşım yalnızca kullanıcı isterse yapılır.
+Your birth year is kept in memory only; it is never stored or sent anywhere, and "Start over" clears it. Your phone's
+orientation, your location and any photo you take never leave the device and are not saved. There are no external network
+requests at runtime; fonts, data and images are all local. The only things stored on the device are whether you've watched the
+story, which hints you've seen and which missions you've completed (no personal data). Sharing happens only when you choose to
+share.
 
-## Bilinen sınırlamalar
+## Known limitations
 
-- Görünürlük bir **tahmindir**: Schaefer tabanlı limit kadir dönüşümü, sabit sönüm katsayısı, tek bir zenit SQM değeri ve sezgisel ufuk parlaması. Gerçek gözlem kişiye, havaya ve göz uyumuna göre değişir.
-- Şehir SQM değeri 2015 ışık kirliliği atlasından alınmıştır; bugünkü gökyüzü daha parlak olabilir.
-- Atmosferik kırılma yok sayıldı (ufka yakın en fazla ~0,6°). Özhareket uygulanmadı.
-- Gökyüzü seçilen tek bir an için hesaplanır; canlı değildir. Ay'ın ufkun altında olduğu bir gece seçilir. Uçuş sırasında zaman donuktur.
-- Yıldız uzaklıkları Hipparcos paralaksından gelir; uzak yıldızlarda belirsizdir. Uzaklığı ölçülemeyen yıldızlar uzak bir kabuğa konmuştur. Yıllar uzaklığa göre yuvarlanır.
-- Uzaklaştıkça yıldızların parlaklığı yapay olarak artırılır ("Pozlama artırıldı").
-- Gerçek yıldız verisi yalnızca çıplak gözle görülebilen yaklaşık 15.600 yıldızı kapsar (birkaç bin ışık yılı). Samanyolu'nun geri kalanı ve diğer galaksiler temsili çizimdir; yalnızca yönleri, uzaklıkları ve Güneş'in galaksideki yeri gerçektir.
-- Güneş Sistemi'nde yörüngeler daire olarak çizilmiş, gezegenler büyütülmüştür. Voyager 1'in yönü yaklaşıktır.
-- Samanyolu gökyüzü katmanı NASA SVS haritasından gelir; görünürlüğü SQM'ye bağlı sezgisel bir fonksiyonla ayarlanır. Andromeda lekesi de sezgiseldir.
-- Dünya görüntüsü 2016 tarihli bileşik bir uydu görüntüsüdür.
-- Doğum yılı yıldızı, uzaklığı ±1 ışık yılı içinde eşleşen çıplak göz yıldızıdır; uzaklık ölçüm hataları birkaç ay ile bir yıl arası kaydırabilir.
-- Jiroskop yönü telefonun pusulasına bağlıdır (manyetik kuzey, kalibrasyon); birkaç derecelik sapma olabilir.
-- Keşif kartlarındaki parlaklık karşılaştırması görünür ışıktadır (V bandı) ve Hipparcos uzaklığına dayanır; uzak yıldızlarda büyük belirsizlik taşır. Tayf türü HYG'den gelir; bileşik tayflarda gösterilmez.
-- Keşif yalnızca çıplak gözle görülebilen ~15.600 yıldızı içerir; yolculukta aradaki sayısız sönük yıldız yoktur.
-- Yıldız yüzeyleri (granülasyon, lekeler, korona, çıkıntılar) ve kara deliklerin toplanma diski temsilidir; boyut, renk, kenar kararması ve ışığın bükülmesi hesaptan gelir. Boyutlar ekranında tam jeodezik hesap 10 Rs içinde, dışında zayıf alan yaklaşımıyla yapılır.
-- 2MRS'in ötesindeki kozmik ağ temsilidir; 2MRS'in eve yakın kalabalığı akı sınırından gelen bir seçim etkisidir ve uzaktan bakınca seyreltilir.
-- Asteroit ve Kuiper kuşağında noktalar cisimlerden çok büyük çizilmiştir.
-- Tarih çapalarında olayın tarihi kaynaklıdır; ışığın yola çıktığı an olayla tarihsel ölçekte ±%6, derin zamanda ±%15 içinde eşlenir. Yıldız kartında yalnızca 300 ışık yılından yakın yıldızlarda gösterilir.
-- Başka bir konumda ışık kirliliği ölçülmez; kullanıcının seçtiği sınıftan (şehir merkezi, banliyö, kırsal) Bortle ölçeğiyle tahmin edilir. Asteroit konumları Ankara gecesine göredir.
-- Fotoğrafta gökyüzü ve ışık tespiti hatalı olabilir; maske ve hiza elle düzeltilebilir. Fotoğraftaki ışıkların sönmesi temsilidir.
+- Visibility is an **estimate**: a Schaefer-based limiting-magnitude conversion, a fixed extinction coefficient, a single
+  zenith SQM value and a heuristic horizon glow. What you actually see depends on the person, the weather and dark adaptation.
+- The city SQM value comes from the 2015 light pollution atlas; today's sky may be brighter.
+- Atmospheric refraction is ignored (at most ~0.6° near the horizon). Proper motion is not applied.
+- The sky is computed for a single chosen moment; it is not live. A night with the Moon below the horizon is chosen. Time is
+  frozen during the flight.
+- Star distances come from Hipparcos parallaxes and are uncertain for distant stars. Stars without a measured distance are
+  placed on a distant shell. Years are rounded according to distance.
+- Star brightness is boosted artificially as you move away ("Exposure increased").
+- Real star data covers only the roughly 15,600 stars visible to the naked eye (a few thousand light-years). The rest of the
+  Milky Way and the other galaxies are illustrations; only their directions, distances and the Sun's position in the galaxy are
+  real.
+- In the Solar System, orbits are drawn as circles and the planets are enlarged. Voyager 1's direction is approximate.
+- The Milky Way sky layer comes from a NASA SVS map; its visibility is set by a heuristic function of SQM. The Andromeda smudge
+  is also heuristic.
+- The Earth image is a 2016 composite satellite image.
+- The birth-year star is the naked-eye star whose distance matches within ±1 light-year; distance measurement errors can shift
+  this by a few months to a year.
+- Gyroscope direction depends on the phone's compass (magnetic north, calibration) and can be off by a few degrees.
+- Brightness comparisons on Explore cards are in visible light (V band) and rely on Hipparcos distances, so they carry large
+  uncertainty for distant stars. Spectral type comes from HYG and is not shown for composite spectra.
+- Explore includes only the ~15,600 naked-eye stars; the countless faint stars in between are missing from the journey.
+- Stellar surfaces (granulation, spots, corona, prominences) and black-hole accretion discs are illustrative; size, colour,
+  limb darkening and light bending are computed. On the Sizes screen, full geodesic ray tracing is used within 10 Rs and a
+  weak-field approximation outside it.
+- The cosmic web beyond 2MRS is illustrative; the crowding near home in 2MRS is a selection effect of its flux limit and is
+  thinned out when seen from afar.
+- Points in the asteroid and Kuiper belts are drawn much larger than the objects themselves.
+- In the history anchors, the date of each event is sourced; the moment the light set out is matched to an event within ±6% on
+  historical timescales and ±15% in deep time. On star cards they are shown only for stars closer than 300 light-years.
+- Light pollution is not measured at other locations; it is estimated on the Bortle scale from the class you choose (city
+  centre, suburb, countryside). Asteroid positions are for the Ankara night.
+- Sky and light detection in a photo can be wrong; the mask and alignment can be adjusted by hand. The lights going out in
+  your photo is illustrative.
 
-## Kaynaklar ve lisanslar
+## Sources and licences
 
-### Veri
-- HYG Database v4.1 — David Nash / astronexus ([github.com/astronexus/HYG-Database](https://github.com/astronexus/HYG-Database)). Lisans: CC BY-SA 4.0; türetilen `sky.json` da CC BY-SA 4.0 ile paylaşılır.
-- Deep Star Maps 2020 (Samanyolu) — NASA Goddard SVS, Ernie Wright; Gaia DR2: ESA/Gaia/DPAC ([svs.gsfc.nasa.gov/4851](https://svs.gsfc.nasa.gov/4851)).
-- Black Marble 2016 (gece; Ankara için 500 m/piksel C1 karosu) — NASA Earth Observatory / Suomi NPP VIIRS. Blue Marble Next Generation, Kasım 2004 (gündüz). NASA SVS 4720 / LRO (Ay). NASA/JPL/Space Science Institute Cassini PIA07782 (Jüpiter). NASA görüntüleri kamu malıdır.
-- Işık kirliliği: World Atlas 2015 (Falchi ve ark. 2016), [lightpollutionmap.info](https://www.lightpollutionmap.info).
-- Merkür, Venüs, Mars, Satürn, Uranüs ve Neptün dokuları: Solar System Scope (CC BY 4.0), NASA görev görüntülerinden derlenmiş (Neptün 1989 Voyager 2).
-- Dönme eksenleri: IAU WGCCRE 2015 (Archinal ve ark. 2018). Yarıçaplar ve Satürn halkaları: NASA Planetary / Saturnian Rings Fact Sheet.
-- Asteroit kuşağı, Jüpiter Truvalıları ve Kuiper kuşağı: NASA/JPL Small-Body Database (SBDB Query API) yörünge elemanları, gözlem gecesine iki cisim Kepler çözümüyle taşınır.
-- Voyager 1: JPL Horizons (id −31); 1 ışık-günü 18 Kasım 2026 ([svs.gsfc.nasa.gov/15120](https://svs.gsfc.nasa.gov/15120)).
-- Andromeda (M31) ve Üçgen Gökadası (M33) uzaklıkları: NASA Hubble Messier kataloğu.
-- 2MRS galaksi kataloğu (Huchra ve ark. 2012, ApJS 199, 26): uzaklık kırmızıya kaymadan, H0 = 70 km/s/Mpc. Küme üyeleri (izdüşümde < 2 Mpc, hız farkı < 2.000 km/s) kümenin yayımlanmış uzaklığına sıkıştırıldı ("Tanrı parmakları" düzeltmesi, temsili). Küme uzaklıkları: Başak — Mei ve ark. 2007; Fornaks — Blakeslee ve ark. 2009; diğerleri cz/H0 (Struble & Rood 1999).
-- Kozmik mikrodalga arka planı: ESA and the Planck Collaboration, CC BY-SA 3.0 IGO.
-- Yıldız yarıçapları: Sirius A — Liebert ve ark. 2005; Arcturus — Ramírez & Allende Prieto 2011; Aldebaran — Richichi & Roccatagliata 2005; Rigel — Moravveji ve ark. 2012; Betelgeuse — Joyce ve ark. 2020; Proxima — Boyajian ve ark. 2012; VY CMa — Wittkowski ve ark. 2012; diğerleri Stefan–Boltzmann ile hesaplanır (bolometrik düzeltme: Flower 1996 / Torres 2010).
-- Sıkı cisimler: PSR J0030+0451 (Riley ve ark. 2019, ApJL 887, L21), Cygnus X-1 (Miller-Jones ve ark. 2021, Science 371, 1046), Sirius B (Bond ve ark. 2017, ApJ 840, 70), Sgr A* (GRAVITY Collaboration 2022, A&A 657, L12; konum Reid & Brunthaler 2004, ApJ 616, 872), S2'nin yörüngesi (GRAVITY Collaboration 2020, A&A 636, L5), M87* (EHT Collaboration 2019, ApJL 875, L6). Yıldızlar: TRAPPIST-1 (Agol ve ark. 2021), Alfa Erboğa A (Kervella ve ark. 2017), Deneb (Schiller & Przybilla 2008), Antares (Ohnaka ve ark. 2013 + van Leeuwen 2007).
+### Data
+- HYG Database v4.1 — David Nash / astronexus ([github.com/astronexus/HYG-Database](https://github.com/astronexus/HYG-Database)). Licence: CC BY-SA 4.0; the derived `sky.json` is also shared under CC BY-SA 4.0.
+- Deep Star Maps 2020 (Milky Way) — NASA Goddard SVS, Ernie Wright; Gaia DR2: ESA/Gaia/DPAC ([svs.gsfc.nasa.gov/4851](https://svs.gsfc.nasa.gov/4851)).
+- Black Marble 2016 (night; 500 m/pixel C1 tile for Ankara) — NASA Earth Observatory / Suomi NPP VIIRS. Blue Marble Next Generation, November 2004 (day). NASA SVS 4720 / LRO (Moon). NASA/JPL/Space Science Institute Cassini PIA07782 (Jupiter). NASA images are in the public domain.
+- Light pollution: World Atlas 2015 (Falchi et al. 2016), [lightpollutionmap.info](https://www.lightpollutionmap.info).
+- Mercury, Venus, Mars, Saturn, Uranus and Neptune textures: Solar System Scope (CC BY 4.0), compiled from NASA mission imagery (Neptune: Voyager 2, 1989).
+- Rotation axes: IAU WGCCRE 2015 (Archinal et al. 2018). Radii and Saturn's rings: NASA Planetary / Saturnian Rings Fact Sheet.
+- Asteroid belt, Jupiter trojans and Kuiper belt: orbital elements from the NASA/JPL Small-Body Database (SBDB Query API), propagated to the observing night with a two-body Kepler solution.
+- Voyager 1: JPL Horizons (id −31); one light-day on 18 November 2026 ([svs.gsfc.nasa.gov/15120](https://svs.gsfc.nasa.gov/15120)).
+- Distances of Andromeda (M31) and the Triangulum Galaxy (M33): NASA Hubble Messier catalogue.
+- 2MRS galaxy catalogue (Huchra et al. 2012, ApJS 199, 26): distance from redshift, H0 = 70 km/s/Mpc. Cluster members (< 2 Mpc in projection, velocity difference < 2,000 km/s) are compressed to the cluster's published distance ("Fingers of God" correction, illustrative). Cluster distances: Virgo — Mei et al. 2007; Fornax — Blakeslee et al. 2009; others cz/H0 (Struble & Rood 1999).
+- Cosmic microwave background: ESA and the Planck Collaboration, CC BY-SA 3.0 IGO.
+- Stellar radii: Sirius A — Liebert et al. 2005; Arcturus — Ramírez & Allende Prieto 2011; Aldebaran — Richichi & Roccatagliata 2005; Rigel — Moravveji et al. 2012; Betelgeuse — Joyce et al. 2020; Proxima — Boyajian et al. 2012; VY CMa — Wittkowski et al. 2012; others computed with Stefan–Boltzmann (bolometric correction: Flower 1996 / Torres 2010).
+- Compact objects: PSR J0030+0451 (Riley et al. 2019, ApJL 887, L21), Cygnus X-1 (Miller-Jones et al. 2021, Science 371, 1046), Sirius B (Bond et al. 2017, ApJ 840, 70), Sgr A* (GRAVITY Collaboration 2022, A&A 657, L12; position Reid & Brunthaler 2004, ApJ 616, 872), orbit of S2 (GRAVITY Collaboration 2020, A&A 636, L5), M87* (EHT Collaboration 2019, ApJL 875, L6). Stars: TRAPPIST-1 (Agol et al. 2021), Alpha Centauri A (Kervella et al. 2017), Deneb (Schiller & Przybilla 2008), Antares (Ohnaka et al. 2013 + van Leeuwen 2007).
 
-### Modeller ve sabitler
-- NELM–SQM dönüşümü: Schaefer, B. E. (1990), PASP 102, 212. Hava kütlesi: Kasten & Young (1989), Applied Optics 28, 4735.
-- B−V → sıcaklık: Ballesteros (2012), EPL 97, 34008. Sıcaklık → renk: Tanner Helland (2012).
-- Güneş'in galaksi merkezine uzaklığı: GRAVITY Collaboration (2019), ~8,18 kpc. Galaktik çerçeve: Astropy `Galactic` (IAU 1958).
-- Samanyolu ölçüleri: Bland-Hawthorn & Gerhard 2016; çubuk açısı Wegg ve ark. 2015. Galaksi görünümleri temsilidir; konum, yön ve boyut gerçektir.
-- Kozmoloji: Planck Collaboration 2020 (A&A 641, A6), düz ΛCDM, H0 = 67,66, Ωm = 0,3111; büyük ölçekte homojenlik Scrimgeour ve ark. 2012.
-- Güneş'in mutlak V kadiri 4,83 (Binney & Merrifield 1998). Korona parlaklık profili Baumbach (1937). Kara delik görüntüleri: Schwarzschild boş jeodezikleri.
+### Models and constants
+- NELM–SQM conversion: Schaefer, B. E. (1990), PASP 102, 212. Airmass: Kasten & Young (1989), Applied Optics 28, 4735.
+- B−V → temperature: Ballesteros (2012), EPL 97, 34008. Temperature → colour: Tanner Helland (2012).
+- Sun's distance to the Galactic Centre: GRAVITY Collaboration (2019), ~8.18 kpc. Galactic frame: Astropy `Galactic` (IAU 1958).
+- Milky Way dimensions: Bland-Hawthorn & Gerhard 2016; bar angle Wegg et al. 2015. Galaxy appearances are illustrative; position, orientation and size are real.
+- Cosmology: Planck Collaboration 2020 (A&A 641, A6), flat ΛCDM, H0 = 67.66, Ωm = 0.3111; large-scale homogeneity Scrimgeour et al. 2012.
+- Absolute V magnitude of the Sun 4.83 (Binney & Merrifield 1998). Coronal brightness profile Baumbach (1937). Black-hole images: Schwarzschild null geodesics.
 
-### Merak notları
+### Fun facts
 
-[ESA: Sirius B](https://www.esa.int/Science_Exploration/Space_Science/Weighing_the_Dog_Star_s_companion) · [NASA: Sirius B](https://science.nasa.gov/missions/hubble/astronomers-use-hubble-to-weigh-dog-stars-companion/) · [NASA: Vega](https://science.nasa.gov/solar-system/summer-triangle-corner-vega/) · [NASA APOD: When Vega is North](https://apod.nasa.gov/rjn/apod/ap150508.html) · [NASA: Betelgeuse](https://science.nasa.gov/missions/hubble-space-telescope/hubble-finds-that-betelgeuses-mysterious-dimming-is-due-to-a-traumatic-outburst) · [NASA: Pioneer 10](https://science.nasa.gov/missions/pioneer/pioneer-10-sends-last-signal/) · [Britannica: Algol](https://www.britannica.com/place/Algol-star) · [Sky & Telescope: Algol](https://skyandtelescope.org/stargazing-and-observing/behold-algol-star-secret/) · [NASA SVS: Pleiades](https://svs.gsfc.nasa.gov/14928) · [NASA: Messier 45](https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-45) · [ESA: Milky Way–Andromeda](https://www.esa.int/Science_Exploration/Space_Science/Hubble_and_Gaia_revisit_fate_of_our_galaxy) · [NASA: Voyager 1 ve Gliese 445](https://www.nasa.gov/image-article/reaching-stars)
+[ESA: Sirius B](https://www.esa.int/Science_Exploration/Space_Science/Weighing_the_Dog_Star_s_companion) · [NASA: Sirius B](https://science.nasa.gov/missions/hubble/astronomers-use-hubble-to-weigh-dog-stars-companion/) · [NASA: Vega](https://science.nasa.gov/solar-system/summer-triangle-corner-vega/) · [NASA APOD: When Vega is North](https://apod.nasa.gov/rjn/apod/ap150508.html) · [NASA: Betelgeuse](https://science.nasa.gov/missions/hubble-space-telescope/hubble-finds-that-betelgeuses-mysterious-dimming-is-due-to-a-traumatic-outburst) · [NASA: Pioneer 10](https://science.nasa.gov/missions/pioneer/pioneer-10-sends-last-signal/) · [Britannica: Algol](https://www.britannica.com/place/Algol-star) · [Sky & Telescope: Algol](https://skyandtelescope.org/stargazing-and-observing/behold-algol-star-secret/) · [NASA SVS: Pleiades](https://svs.gsfc.nasa.gov/14928) · [NASA: Messier 45](https://science.nasa.gov/mission/hubble/science/explore-the-night-sky/hubble-messier-catalog/messier-45) · [ESA: Milky Way–Andromeda](https://www.esa.int/Science_Exploration/Space_Science/Hubble_and_Gaia_revisit_fate_of_our_galaxy) · [NASA: Voyager 1 and Gliese 445](https://www.nasa.gov/image-article/reaching-stars)
 
-### Tarih çapaları
+### History anchors
 
-Olayların kaynakları `web/src/content/history.ts` içinde (NASA, ESA, Britannica, UNESCO, hakemli makaleler).
-Görseller: NASA (kamu malı; Apollo 8 ve 11, STS-31, Voyager, Webb fırlatışı, Soluk Mavi Nokta, Plüton, Uranüs, Neptün, Chicxulub,
-Shoemaker-Levy 9, SN 1987A, Kepler süpernova kalıntısı, Hubble XDF; sanatçı çizimleri: gezegen oluşturan disk, Samanyolu), ESA ve
-Planck (CMB, CC BY-SA 3.0 IGO), Wikimedia Commons (kamu malı: Bayeux duvar halısı, Fausto Zonaro, Rohan Ustası, Kopernik 1543,
-Galileo 1610, Newton 1687; CC0: The Metropolitan Museum of Art; CC BY-SA 3.0: Teomancimit, Göbeklitepe).
+Sources for the events are in `web/src/content/history.ts` (NASA, ESA, Britannica, UNESCO, peer-reviewed papers).
+Images: NASA (public domain; Apollo 8 and 11, STS-31, Voyager, the Webb launch, the Pale Blue Dot, Pluto, Uranus, Neptune,
+Chicxulub, Shoemaker-Levy 9, SN 1987A, Kepler's supernova remnant, Hubble XDF; artist's impressions: protoplanetary disc,
+Milky Way), ESA and Planck (CMB, CC BY-SA 3.0 IGO), Wikimedia Commons (public domain: Bayeux Tapestry, Fausto Zonaro, Rohan
+Master, Copernicus 1543, Galileo 1610, Newton 1687; CC0: The Metropolitan Museum of Art; CC BY-SA 3.0: Teomancimit, Göbeklitepe).
 
-### Yazılım
+### Software
 
-Astropy (BSD-3), NumPy (BSD-3), three.js (MIT), astronomy-engine (MIT), Vite (MIT), Vitest (MIT), OpenEXR (BSD-3). Fontlar (Fraunces, Inter): SIL Open Font License.
+Astropy (BSD-3), NumPy (BSD-3), three.js (MIT), astronomy-engine (MIT), Vite (MIT), Vitest (MIT), OpenEXR (BSD-3). Fonts (Fraunces, Inter): SIL Open Font License.
 
-## Belgeler
+## Documentation
 
-- [docs/SPEC.md](docs/SPEC.md): tasarım belgesi (veri, bilim, sahneler, kabul ölçütleri)
-- [docs/EXTRAS.md](docs/EXTRAS.md): sonradan eklenen özellikler ve tasarımdan sapmalar
-- [docs/DEMO.md](docs/DEMO.md): canlı sunum akışı ve yedek plan
+These documents are in Turkish:
+
+- [docs/SPEC.md](docs/SPEC.md): design document (data, science, scenes, acceptance criteria)
+- [docs/EXTRAS.md](docs/EXTRAS.md): features added later and deviations from the design
+- [docs/DEMO.md](docs/DEMO.md): live demo talk track and backup plan
