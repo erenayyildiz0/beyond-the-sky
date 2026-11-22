@@ -1,4 +1,4 @@
-import { el, show } from "./hud";
+import { el, iconButton, show } from "./hud";
 import { t } from "./i18n";
 
 export interface JumpItem { key: string; label: string }
@@ -10,7 +10,7 @@ export class JumpMenu {
   onPick: (key: string) => void = () => {};
 
   constructor(bar: HTMLElement, root: HTMLElement, private items: () => JumpItem[]) {
-    this.button = el("button", "fly-small", `☰ ${t("explore.jump")}`, bar);
+    this.button = iconButton(bar, "☰", t("explore.jump"));
     this.panel = el("div", "jump-menu", undefined, root);
     this.button.addEventListener("click", () => (this.open ? this.close() : this.show()));
     this.panel.addEventListener("pointerdown", e => e.stopPropagation());

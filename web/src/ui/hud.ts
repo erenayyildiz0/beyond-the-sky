@@ -39,3 +39,11 @@ export function progressRing(parent: HTMLElement, size = 88, stroke = 3) {
   parent.appendChild(svg);
   return (p: number) => { fg.style.strokeDashoffset = String(c * (1 - p)); };
 }
+
+/** Simge + etiketli küçük düğme; dar ekranda etiket gizlenir (aria-label ve title kalır) */
+export function iconButton(parent: HTMLElement, icon: string, label: string) {
+  const b = el("button", "fly-small icon-btn", undefined, parent);
+  b.append(el("span", "", icon), el("span", "lbl", ` ${label}`));
+  b.setAttribute("aria-label", label); b.title = label;
+  return b;
+}

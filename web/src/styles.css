@@ -124,6 +124,7 @@ button { font: inherit; color: inherit; }
 .light-label { font-size: var(--size-small); color: var(--muted); letter-spacing: .04em; }
 .light-value { font-size: clamp(20px, 3.2vw, 34px); font-weight: 600; margin-top: 2px; }
 .light-dist { font-size: var(--size-small); color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.cosmo-note:not(.on) { display: none; }                   /* yalnızca 100 milyon ışık yılının ötesinde */
 .fly-extra { position: absolute; left: 20px; right: 180px; bottom: calc(30px + var(--safe-b)); display: flex; justify-content: space-between; pointer-events: none; }
 .fly-left { display: flex; gap: 8px; }
 .fly-small { pointer-events: auto; border: 1px solid var(--badge-border); background: var(--badge-bg); border-radius: 999px; padding: 9px 16px;
@@ -398,3 +399,12 @@ button { font: inherit; color: inherit; }
 .own-tools { position: absolute; right: 16px; bottom: calc(36px + var(--safe-b)); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .own-shift { display: flex; flex-direction: column; gap: 4px; font-size: var(--size-small); color: var(--muted); }
 .own-shift input { pointer-events: auto; width: 140px; }
+
+/* Dar ekran (telefon dikey): Keşif düğmeleri yalnızca simge, Boyutlar düğmeleri tek satır, jiroskop anahtarı çakışmasın */
+@media (max-width: 600px) {
+  .icon-btn .lbl { display: none; }
+  .icon-btn { padding: 8px 12px; }
+  .explore-bar { max-width: 50vw; gap: 6px; }
+  .compare-bar .fly-btn { white-space: nowrap; font-size: var(--size-small); height: 52px; }
+  .compare-bar { bottom: calc(52px + var(--safe-b)); }
+}

@@ -1,4 +1,4 @@
-import { el, show } from "./hud";
+import { el, iconButton, show } from "./hud";
 import { t } from "./i18n";
 
 const GREEK: Record<string, string> = {
@@ -40,7 +40,7 @@ export class SearchPanel {
 
   constructor(bar: HTMLElement, root: HTMLElement, entries: SearchEntry[]) {
     this.index = entries.map(e => ({ e, f: fold(e.name) }));
-    this.button = el("button", "fly-small", `🔍 ${t("explore.search")}`, bar);
+    this.button = iconButton(bar, "🔍", t("explore.search"));
     this.panel = el("div", "search-panel", undefined, root);
     this.input = el("input", "search-input", undefined, this.panel);
     this.input.type = "search"; this.input.placeholder = t("explore.search"); this.input.autocomplete = "off";

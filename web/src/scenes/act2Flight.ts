@@ -41,7 +41,7 @@ import {
 } from "../science/freeFlight";
 import { smoothstep } from "../science/visibility";
 import { fmtDec, fmtKm, fmtLightTime, fmtLy } from "../ui/format";
-import { el, show } from "../ui/hud";
+import { el, iconButton, show } from "../ui/hud";
 import { getLang, t } from "../ui/i18n";
 import { PickCard, type PickInfo } from "../ui/pickCard";
 import { Ruler } from "../ui/ruler";
@@ -593,7 +593,7 @@ export class Act2Flight implements Scene {
       this.search.onOpen = () => { this.jump?.close(); this.missions?.close(); };
       this.missions.onOpen = () => { this.jump?.close(); this.search?.close(); };
       this.jump.button.addEventListener("click", () => this.missions?.close());
-      const lines = el("button", "fly-small", `✶ ${t("explore.lines")}`, this.xhud.bar);
+      const lines = iconButton(this.xhud.bar, "✶", t("explore.lines"));
       lines.addEventListener("click", () => { this.linesOn = !this.linesOn; lines.classList.toggle("active", this.linesOn); });
     }
     this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblBelts, lblBh, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };

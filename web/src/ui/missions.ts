@@ -12,7 +12,7 @@ export class MissionsUi {
   onOpen: () => void = () => {};
 
   constructor(bar: HTMLElement, root: HTMLElement, private log: MissionLog, private birthKnown: () => boolean) {
-    this.button = el("button", "fly-small", "", bar);
+    this.button = el("button", "fly-small icon-btn", "", bar);
     this.panel = el("div", "jump-menu missions", undefined, root);
     this.toast = el("div", "mission-toast", undefined, root);
     this.button.addEventListener("click", () => (this.open ? this.close() : this.show()));
@@ -23,7 +23,10 @@ export class MissionsUi {
 
   get open() { return this.panel.classList.contains("on"); }
   close() { show(this.panel, false); }
-  refresh() { this.button.textContent = `★ ${t("explore.missions")} (${this.log.done.size}/${MISSION_IDS.length})`; }
+  refresh() {
+    this.button.replaceChildren(el("span", "", "★ "), el("span", "lbl", `${t("explore.missions")} `), el("span", "", `${this.log.done.size}/${MISSION_IDS.length}`));
+    this.button.setAttribute("aria-label", t("explore.missions"));
+  }
 
   private show() {
     this.onOpen();
