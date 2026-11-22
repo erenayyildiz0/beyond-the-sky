@@ -1,7 +1,5 @@
 # Beyond the Sky
 
-**English** · [Türkçe](README.tr.md)
-
 *The universe is closer than you think.*
 
 **Beyond the Sky** is an interactive web experience about what city lights hide from us. It starts with the real night sky

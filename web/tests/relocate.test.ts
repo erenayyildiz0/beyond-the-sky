@@ -42,12 +42,12 @@ describe("E1 konumumu kullan (EXTRAS kabul ölçütleri)", () => {
       expect(Math.abs(s.starAlt[polaris] - lat)).toBeLessThan(1);
     }
   });
-  it("gece seçimi: Ankara'da 21 Kasım'dan aramak 29 Kasım'ı bulur (SPEC §5.5)", () => {
-    const n = chooseNight(L.lat, L.lon, L.height_m, new Date(2026, 10, 21))!.date;
-    expect(n.getDate()).toBe(29); expect(n.getHours()).toBe(21);
-  });
   // Cihazın saat dilimi konumunkiyle aynı varsayılır: testte o şehrin saat dilimi
   const inTz = <T>(tz: string, f: () => T) => { const old = process.env.TZ; process.env.TZ = tz; try { return f(); } finally { process.env.TZ = old; } };
+  it("gece seçimi: Ankara'da 21 Kasım'dan aramak 29 Kasım'ı bulur (SPEC §5.5)", () => {
+    const n = inTz("Europe/Istanbul", () => { const d = chooseNight(L.lat, L.lon, L.height_m, new Date(2026, 10, 21))!.date; return { day: d.getDate(), h: d.getHours() }; });
+    expect(n.day).toBe(29); expect(n.h).toBe(21);
+  });
   it("gece seçimi: 21:00'de karanlık olmayan yerde daha geç saat (Sidney, kasım: Güneş 21:00'de −14°)", () => {
     const n = inTz("Australia/Sydney", () => { const r = chooseNight(-33.87, 151.21, 0, new Date(2026, 10, 22)); return r && { lim: r.sunLimit, h: r.date.getHours() }; });
     expect(n).not.toBeNull(); expect(n!.lim).toBe(-18); expect(n!.h === 0 || n!.h >= 22).toBe(true);
