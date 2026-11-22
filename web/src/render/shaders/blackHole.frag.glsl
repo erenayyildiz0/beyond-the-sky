@@ -4,6 +4,7 @@
 // (iç kenar ISCO = 3 Rs), sıcaklık T ∝ r^−3/4 (1 − √(3/r))^1/4 (Shakura–Sunyaev), Doppler ve kütle çekimsel kızıla kayma.
 uniform vec3 uCenter, uDiskN;   // görüş uzayında
 uniform float uRs, uHalf, uFull, uOpacity, uTime, uDisk, uDiskOut;
+uniform float uRM;              // tam hesap küresinin yarıçapı (Rs); dışında zayıf alan sapması α = 2 Rs / b
 uniform mat3 uViewToWorld;      // görüş → dünya (arka plan yönü)
 uniform sampler2D uMW;          // Samanyolu (alt-az eşdikdörtgen, skyDome ile aynı eşleme); uHasMW = 0 → yok
 uniform float uHasMW, uMWGain;
@@ -61,7 +62,7 @@ void main() {
   float trans = 1.0;                               // disk saydamlığı (önden arkaya birleştirme)
   vec3 outDir = d;
   bool captured = false;
-  const float RM = 40.0;                           // bu yarıçapın dışında zayıf alan: düz çizgi + analitik sapma
+  float RM = uRM;                                  // bu yarıçapın dışında zayıf alan: düz çizgi + analitik sapma
   if (b > RM * 0.98 || (tca < 0.0 && rc > RM)) {
     // Zayıf alan: sapma açısı α = 2 Rs / b (Einstein); ışın kara deliğe doğru bükülür
     vec3 toC = normalize(-o - d * tca);
@@ -76,12 +77,14 @@ void main() {
       float r = length(x);
       if (r < 1.0) { captured = true; break; }
       if (r > RM + 1.0 && dot(x, v) > 0.0) break;
-      float dt = clamp(0.06 * r * r / (r + 2.0), 0.015, 2.5);
+      float dt = clamp(0.08 * r * r / (r + 2.0), 0.02, 2.5);
       // Hız Verlet
-      vec3 acc = -1.5 * h2 * x / pow(r, 5.0);
+      float r2 = r * r;
+      vec3 acc = -1.5 * h2 * x / (r2 * r2 * r);
       vec3 xn = x + v * dt + 0.5 * acc * dt * dt;
       float rn = length(xn);
-      vec3 accn = -1.5 * h2 * xn / pow(rn, 5.0);
+      float rn2 = rn * rn;
+      vec3 accn = -1.5 * h2 * xn / (rn2 * rn2 * rn);
       v = normalize(v + 0.5 * (acc + accn) * dt);
       float sn = dot(xn, uDiskN);
       if (uDisk > 0.0 && sign(sn) != sign(side) && trans > 0.01) {

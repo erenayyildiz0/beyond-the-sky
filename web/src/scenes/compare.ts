@@ -8,6 +8,7 @@ import { PLANET_LOOK } from "../render/solar";
 import { applyStarLook, createStarSurfaceMaterial } from "../render/starSurface";
 import { createBlackHole } from "../render/blackHole";
 import { createPulsar } from "../render/pulsar";
+import { precompile } from "../render/layers";
 import { EARTH_RADIUS_KM, MOON_RADIUS_KM, PLANET_RADIUS_KM, RS_KM_PER_MSUN, SUN_RADIUS_KM } from "../science/constants";
 import { kelvinToRgb, PUBLISHED_RADII } from "../science/stars";
 import { smoothstep } from "../science/visibility";
@@ -94,6 +95,11 @@ export class Compare implements Scene {
   private ui!: { root: HTMLElement; title: HTMLElement; size: HTMLElement; src: HTMLElement; note: HTMLElement; slider: HTMLInputElement; labels: HTMLElement[] };
   private light = new THREE.Vector3(-3e12, 1.5e12, 3e12);
   private pulsars: ReturnType<typeof createPulsar>[] = [];
+  /** Kara delik efekt dörtgenleri tam ekran ve ayıklanmaz: yalnızca etki küresi görüş konisindeyken çizilir */
+  private holes: { mesh: THREE.Object3D; sphere: THREE.Sphere }[] = [];
+  private frustum = new THREE.Frustum();
+  private m4 = new THREE.Matrix4();
+  private shownKey = "";
 
   enter(ctx: AppContext) {
     this.ctx = ctx;
@@ -111,6 +117,8 @@ export class Compare implements Scene {
     this.scene.add(bg.mesh);
     this.buildUi();
     this.onResize(innerWidth, innerHeight);
+    this.update(0);
+    precompile(ctx.renderer, this.scene, this.cam);          // ilk göründüğünde derleme takılması olmasın
   }
 
   private makeBody(it: Item, x: number): THREE.Object3D {
@@ -123,8 +131,11 @@ export class Compare implements Scene {
     }
     if ("bh" in it.look) {
       // Disk ekvator düzleminde, bize ~75° eğik (temsili); efekt karesi 9 Rs
+      // Tam jeodezik hesap 10 Rs içinde (gölge, foton halkası ve disk orada); dışında zayıf alan sapması
       const n = new THREE.Vector3(0, 1, 0.27).normalize();
-      return createBlackHole(new THREE.Vector3(x, 0, 0), it.rKm, { diskN: n, diskOut: 8, halfRs: 9, disk: 1.8 }).mesh;
+      const mesh = createBlackHole(new THREE.Vector3(x, 0, 0), it.rKm, { diskN: n, diskOut: 8, halfRs: 9, disk: 1.8, rm: 10 }).mesh;
+      this.holes.push({ mesh, sphere: new THREE.Sphere(new THREE.Vector3(x, 0, 0), 13 * it.rKm) });
+      return mesh;
     }
     if ("star" in it.look) {
       const [r, g, b] = kelvinToRgb(it.look.star);
@@ -202,8 +213,16 @@ export class Compare implements Scene {
     for (const p of this.pulsars) p.update();
     this.cam.updateProjectionMatrix();
     this.cam.updateMatrixWorld();
+    this.frustum.setFromProjectionMatrix(this.m4.multiplyMatrices(this.cam.projectionMatrix, this.cam.matrixWorldInverse));
+    for (const h of this.holes) h.mesh.visible = this.frustum.intersectsSphere(h.sphere);
 
     const cur = ITEMS[Math.round(this.f)], lang = getLang();
+    if (this.shownKey !== cur.key) { this.shownKey = cur.key; this.showText(cur, lang); }
+    this.placeLabels();
+  }
+
+  /** Başlık ve satırlar yalnızca odak değişince yazılır (her karede DOM yeniden düzenlenmesin) */
+  private showText(cur: Item, lang: "tr" | "en") {
     this.ui.title.textContent = lang === "tr" ? cur.tr : cur.en;
     const vsEarth = cur.rKm / EARTH_RADIUS_KM, vsSun = cur.rKm / SUN_RADIUS_KM;
     const rel = vsSun >= 0.5 ? t("compare.vsSun", { n: fmtDec(vsSun, vsSun < 10 ? 2 : 0, lang) })
@@ -212,18 +231,22 @@ export class Compare implements Scene {
     this.ui.size.textContent = `${t("compare.radius")}: ${fmtKm(cur.rKm, lang)} · ${rel}`;
     this.ui.src.textContent = `${t("compare.source")}: ${cur.source}`;
     this.ui.note.textContent = cur.note ? cur.note[lang] : "";
-    this.placeLabels();
   }
 
+  private v = new THREE.Vector3();
+  private labelPos: string[] = [];
   private placeLabels() {
-    const v = new THREE.Vector3();
+    const v = this.v;
     ITEMS.forEach((it, i) => {
       v.set(this.x[i], -it.rKm * 1.15, 0).project(this.cam);
       const px = (v.x + 1) / 2 * innerWidth, py = (1 - v.y) / 2 * innerHeight;
       const big = it.rKm / (this.cam.position.z * Math.tan(this.cam.fov * Math.PI / 360)) * innerHeight / 2;   // görünen yarıçap (px)
       const vis = v.z < 1 && px > -100 && px < innerWidth + 100 && big > 3;
       show(this.ui.labels[i], vis);
-      if (v.z < 1 && v.z > -1) this.ui.labels[i].style.transform = `translate(${px}px, ${Math.min(py, innerHeight - 150)}px) translateX(-50%)`;
+      if (vis && v.z > -1) {
+        const tr = `translate(${px.toFixed(1)}px, ${Math.min(py, innerHeight - 150).toFixed(1)}px) translateX(-50%)`;
+        if (this.labelPos[i] !== tr) { this.labelPos[i] = tr; this.ui.labels[i].style.transform = tr; }
+      }
     });
   }
 
