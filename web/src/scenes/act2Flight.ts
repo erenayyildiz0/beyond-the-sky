@@ -45,6 +45,11 @@ import { PickCard, type PickInfo } from "../ui/pickCard";
 import { Ruler } from "../ui/ruler";
 import { applySkyState, getSkyWorld, type SkyWorld } from "./act1Lights";
 import { ExploreHud } from "../ui/exploreHud";
+import { SearchPanel, type SearchEntry } from "../ui/search";
+import { createLightRay } from "../render/lightRay";
+import { conName, parseSpect, relLum, sunMagFrom, sunState, tonight, voyagerYears } from "../science/facts";
+import { bvToKelvin } from "../science/stars";
+import { noteFor } from "../content/cards";
 import { JumpMenu, type JumpItem } from "../ui/jumpMenu";
 
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
@@ -77,7 +82,8 @@ interface FlightWorld {
   lines: ReturnType<typeof createConstellationLines>;
   bubbleMat: THREE.ShaderMaterial;
   starOrigin: THREE.Vector3;
-  detail: { ci: (number | null)[] } | null;
+  detail: { ci: (number | null)[]; con: string[]; spect: (string | null)[] } | null;
+  ray: ReturnType<typeof createLightRay>;
 }
 
 const MLY_KM = 1e6 * LY_KM;
@@ -310,7 +316,9 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
   stops.sort((a, b) => a.z - b.z);
 
   (ctx.shared as Record<string, unknown>).__layers = layers;            // teşhis (yalnızca bellek)
-  world = { sgra: { posKm: sgraKm, rsKm }, layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, s2, sgraDot, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat };
+  world = { sgra: { posKm: sgraKm, rsKm }, layers, deep, starMat, earth, solar, route, space, stops, bodies, state, galaxies, here, s2, sgraDot, cosmic: null, starBody, starOrigin, detail: null, lines, bubbleMat,
+    ray: createLightRay() };
+  world.deep.scene.add(world.ray.line);
   const w = world;
   for (const L of layers) precompile(ctx.renderer, L.scene, L.camera);
   loadDetail().then(d => { w.detail = d; }).catch(e => console.warn(e));
@@ -379,6 +387,9 @@ export class Act2Flight implements Scene {
   private explore = false;
   private xhud: ExploreHud | null = null;
   private jump: JumpMenu | null = null;
+  private search: SearchPanel | null = null;
+  private linesOn = false;
+  private rayLabel!: HTMLElement;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
@@ -524,12 +535,20 @@ export class Act2Flight implements Scene {
     const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root), text: "" }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
+    card.onTrace = () => { if (this.selected) this.traceLight(this.selected); };
+    this.rayLabel = el("div", "ray-label", undefined, root);
     if (this.explore) {
       let seen = false;
       try { seen = localStorage.getItem("bts.tipsSeen") === "1"; } catch { /* özel mod */ }
       this.xhud = new ExploreHud(root, this.ctx.assets.sky.meta.obs_year_frac, seen);
+      this.search = new SearchPanel(this.xhud.bar, root, this.searchEntries());
+      this.search.onPick = k => this.openFromSearch(k);
       this.jump = new JumpMenu(this.xhud.bar, root, () => this.jumpItems());
       this.jump.onPick = k => this.jumpTo(k);
+      this.search.onOpen = () => this.jump?.close();
+      this.jump.button.addEventListener("click", () => this.search?.close());
+      const lines = el("button", "fly-small", `✶ ${t("explore.lines")}`, this.xhud.bar);
+      lines.addEventListener("click", () => { this.linesOn = !this.linesOn; lines.classList.toggle("active", this.linesOn); });
     }
     this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblBelts, lblBh, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
   }
@@ -727,6 +746,88 @@ export class Act2Flight implements Scene {
     return o.quaternion();
   }
 
+  private rayFrom = 0;
+  /** Işığını izle (§6.5.6): yıldızdan Güneş'e akan çizgi; sayaç yola çıkış yılından gözlem yılına */
+  private traceLight(tg: Target) {
+    if (tg.kind !== "star" || tg.dly == null) return;
+    this.rayFrom = this.ctx.assets.sky.meta.obs_year_frac - tg.dly;
+    this.w.ray.start(_v.copy(tg.posKm).divideScalar(LY_KM), tg.dly);
+  }
+  private updateRay(dt: number) {
+    const k = this.w.ray.update(dt);
+    show(this.rayLabel, k != null && this.phase !== "return");
+    if (k == null) return;
+    const obs = this.ctx.assets.sky.meta.obs_year_frac;
+    const y = Math.floor(this.rayFrom + (obs - this.rayFrom) * k);
+    const lang = getLang();
+    const yr = y <= 0 ? (lang === "tr" ? `MÖ ${1 - y}` : `${1 - y} BC`) : String(y);
+    this.rayLabel.replaceChildren(el("div", "ray-year", yr), el("div", "ray-note", t("card.ray")));
+    _v.copy(this.w.ray.head).project(this.layerCam("deep"));
+    if (_v.z < 1 && _v.z > -1) moveLabel(this.rayLabel, (_v.x + 1) / 2 * innerWidth + 10, (1 - _v.y) / 2 * innerHeight - 30);
+  }
+
+  /** Arama listesi (§6.12): adlar + Andromeda, Üçgen Gökadası, Ülker, Güneş, Voyager 1 */
+  private searchEntries(): SearchEntry[] {
+    const sky = this.ctx.assets.sky;
+    const out: SearchEntry[] = sky.names.map(n => ({ key: `star:${n.i}`, name: n.name, mag: sky.starMag[n.i] }));
+    const alc = sky.stars.data.findIndex(r => r[7] === 17702);
+    if (alc >= 0) out.push({ key: `star:${alc}`, name: getLang() === "tr" ? "Ülker" : "Pleiades", mag: -2 });
+    for (const k of ["m31", "m33", "sun", "voyager"]) {
+      const b = this.w.bodies.find(x => x.key === k);
+      if (b) out.push({ key: `body:${k}`, name: b.name, mag: -3 });
+    }
+    return out;
+  }
+
+  private openFromSearch(key: string) {
+    const [kind, id] = key.split(":");
+    const tg = kind === "star" ? this.starTarget(+id) : this.w.bodies.find(b => b.key === id);
+    if (!tg) return;
+    this.selected = tg;
+    this.lookAt(tg.posKm, 1.2);
+    this.ui.card.open(this.cardInfo(tg));
+    if (tg.kind === "star" && tg.dly != null) this.traceLight(tg);
+  }
+
+  /** Yıldız kartı (SPEC §3.16): hepsi veriden; uzak yıldızlarda "~" ve 2 anlamlı basamak */
+  private starCard(i: number, tg: Target): PickInfo {
+    const sky = this.ctx.assets.sky, lang = getLang(), det = this.w.detail;
+    const hip = sky.stars.data[i][7], mag = sky.starMag[i], dly = sky.starDly[i];
+    const lines: string[] = [];
+    const sp = det ? parseSpect(det.spect[i]) : null;
+    const far = dly != null && dly >= 1000;
+    const num = (n: number, d = 0) => (far ? "~" + fmtInt(+n.toPrecision(2), lang) : d ? fmtDec(n, d, lang) : fmtInt(Math.round(n), lang));
+    if (dly != null) {
+      const ll = lightLeft(dly, sky.meta.obs_year_frac);
+      const yrTr = ll.bc != null ? `MÖ ${trLocative(ll.bc)}` : trLocative(ll.year);
+      const yrEn = ll.bc != null ? `${ll.bc} BC` : String(ll.year);
+      const ap = ll.approx ? "~" : "";
+      lines.push(t("card.dist", { dist: far ? num(dly) : fmtDec(dly, dly < 100 ? 1 : 0, lang), yıl_de: ap + yrTr, year: ap + yrEn }));
+      const m = sunMagFrom(dly);
+      lines.push(t("card.sunFromThere", { m: fmtDec(m, 1, lang), state: t(`explore.sun.${sunState(m)}`) }));
+      const L = relLum(mag, dly);
+      const n = L >= 1 ? L : 1 / L;
+      lines.push(t(L >= 1 ? "card.lum.brighter" : "card.lum.fainter", { n: n >= 10 ? num(n) : fmtDec(n, 1, lang) }));
+    }
+    const ci = det?.ci[i];
+    const T = Math.round(bvToKelvin(ci ?? 0.6) / 10) * 10;
+    const color = sp?.letter ? ` (${t(`color.${sp.letter}` as "color.G")})` : "";
+    lines.push(t("card.temp", { t: fmtInt(T, lang), color: "" }).replace(" ()", color));
+    if (sp?.cls) lines.push(t(`lum.${sp.cls}` as "lum.V"));
+    if (dly != null) lines.push(t("card.voyager", { n: fmtInt(+voyagerYears(dly).toPrecision(3), lang) }));
+    const tn = tonight(mag, sky.starAlt[i], sky.meta.visibility);
+    lines.push(t(`card.tonight.${tn}` as "card.tonight.city"));
+    if (dly == null) lines.push(t("card.nodist"));
+    if (tg.note) lines.push(tg.note);
+    if (dly != null) lines.push(t("card.repGlow"));                         // yakından görünüm temsili (§6.11)
+    const note = hip ? noteFor(hip) : null;
+    return {
+      title: tg.name, subtitle: det ? conName(det.con[i], lang) : undefined, lines, fly: dly != null ? "here" : null,
+      note: note ? { text: lang === "tr" ? note.tr : note.en, sources: note.sources } : undefined,
+      footer: t("card.footer"), trace: dly != null,
+    };
+  }
+
   private tipDone(kind: "look" | "fly" | "tap") {
     if (this.xhud?.advanceTip(kind)) { try { localStorage.setItem("bts.tipsSeen", "1"); } catch { /* özel mod */ } }
   }
@@ -907,6 +1008,7 @@ export class Act2Flight implements Scene {
     this.w.state.bhW = 1 - smoothstep(3e5, 6e5, this.w.state.bhDistRs);   // yörünge ~24.000 Rs'ye uzanır
     this.updateWorlds(z, alt);
     this.updateHud(z, alt, throttle);
+    this.updateRay(dt);
     if (this.xhud) {
       _v.set(0, 0, 0).project(this.layerCam("deep"));
       this.xhud.update(dt, this.C.length() / LY_KM, { x: _v.x, y: _v.y, z: _v.z }, getLang(), this.phase === "free" && z < 16.9, !this.ui.stopCard.visible);
@@ -1070,7 +1172,7 @@ export class Act2Flight implements Scene {
     this.autoplay(near);
     // Takımyıldız çizgileri (§6.5.5)
     this.w.bubbleMat.uniforms.uOpacity.value = smoothstep(15.7, 15.9, z) * (1 - smoothstep(16.6, 16.8, z));   // z ∈ [15,9; 16,6]
-    this.w.lines.update(smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);
+    this.w.lines.update(this.linesOn ? 1 : smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);   // Keşif: anahtarla, z sınırı yok
     show(this.ui.hint2, !this.explore && !this.ascentAuto && this.moved && this.freeHintS < 6);   // Keşif'te ipuçları ayrı
     Object.assign(this.ctx.debug, {
       "konum": `${fmtKm(D, lang)} · yükseklik ${fmtKm(Math.max(alt, 0), lang)}`,
@@ -1167,6 +1269,7 @@ export class Act2Flight implements Scene {
     this.tipDone("tap");
     this.selected = chosen.tg;
     this.ui.card.open(this.cardInfo(chosen.tg));
+    if (chosen.tg.kind === "star" && chosen.tg.dly != null) this.traceLight(chosen.tg);     // §6.5.6: aynı anda ışık çizgisi
   }
 
   private screenRadius(posKm: THREE.Vector3, rKm: number, fovDeg: number) {
@@ -1176,7 +1279,7 @@ export class Act2Flight implements Scene {
 
   private cardInfo(tg: Target): PickInfo {
     const lang = getLang();
-    if (tg.kind === "star" && tg.dly == null) return { title: tg.name, lines: [t("card.nodist")], fly: null };
+    if (tg.kind === "star") return this.starCard(+tg.key.slice(5), tg);
     const D = tg.kind === "earth" ? 0 : tg.posKm.length();
     const lines: string[] = [];
     if (tg.kind !== "earth") {
@@ -1186,10 +1289,12 @@ export class Act2Flight implements Scene {
     }
     if (["mercury", "venus", "mars", "saturn", "uranus", "neptune"].includes(tg.key)) lines.push(t("card.repTexture"));
     if (tg.key === "jupiter") lines.push(t("card.jupiterMap"));
-    if (tg.key === "sun" || tg.kind === "star") lines.push(t("card.repGlow"));
+    if (tg.key === "sun") lines.push(t("card.repGlow"));
     if (tg.note) lines.push(tg.note);
     else if (tg.kind === "galaxy") lines.push(t("card.repGalaxy"));
-    return { title: tg.name, lines, fly: tg.kind === "earth" ? "home" : "here" };
+    const note = noteFor(tg.key);
+    return { title: tg.name, lines, fly: tg.kind === "earth" ? "home" : "here",
+      note: note ? { text: lang === "tr" ? note.tr : note.en, sources: note.sources } : undefined };
   }
 
   // ---------- çizim ----------
