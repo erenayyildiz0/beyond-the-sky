@@ -64,7 +64,7 @@ export class Intro implements Scene {
     ctx.gyro.enable().catch(() => {});
     requestWakeLock();
     if (matchMedia("(pointer: coarse)").matches) document.documentElement.requestFullscreen?.().catch(() => {});
-    if (mode === "explore" || ctx.params.explore) { ctx.director.go("act2"); return; }
+    if (mode === "explore" || ctx.params.explore) { ctx.shared.explore = true; ctx.director.go("act2"); return; }
     if (this.ctx.params.compare) { this.ctx.director.go("compare"); return; }
     const z = this.ctx.params.z;
     if (z != null || this.ctx.params.goto) {                                     // ?z=15.3 → Perde 2 doğrudan bu ölçekten (§2.1)

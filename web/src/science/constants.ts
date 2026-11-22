@@ -33,3 +33,7 @@ export const PC_LY = 3.261563777;                // 1 parsek (IAU 2015 B2) ış�
 export const S2_ORBIT = {
   aArcsec: 0.125058, e: 0.884649, iDeg: 134.567, OmegaDeg: 228.171, omegaDeg: 66.263, periodYr: 16.0455, tPeriYr: 2018.37900,
 };
+
+// Keşif bilgi kartları (SPEC §3.16)
+export const SUN_ABS_MAG_V = 4.83;               // Güneş'in mutlak V kadiri (Binney & Merrifield 1998, Galactic Astronomy, Tablo 2.1)
+export const MALAZGIRT_YEAR = 1071;              // Malazgirt Savaşı (görev 3, SPEC §2.6)

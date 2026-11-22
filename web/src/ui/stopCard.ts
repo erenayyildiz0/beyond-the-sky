@@ -12,6 +12,7 @@ export class StopCard {
     this.text = el("div", "stop-text poem", "", this.root);
   }
   /** key değişince içerik yenilenir; null gizler */
+  get visible() { return this.root.classList.contains("on"); }
   set(key: string | null, title = "", text = "") {
     if (key === this.key) return;
     this.key = key;

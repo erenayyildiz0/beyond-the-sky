@@ -33,6 +33,7 @@ export function fmtLightTime(s: number, lang: Lang = "tr") {
     : { s: ["second", "seconds"], m: ["minute", "minutes"], h: ["hour", "hours"], d: ["day", "days"], y: ["year", "years"] };
   const w = (u: keyof typeof T, n: number) => T[u][n === 1 ? 0 : 1];
   const Y = 365.25 * 86400;
+  if (s < 1e-9) return `${nf(0)} ${w("s", 0)}`;               // tam evde (çatıda): "0 saniye"
   if (s < 60) {
     // çok kısa sürelerde anlamlı basamak (alçak irtifa): 0,00014 saniye
     const d = s >= 10 ? 0 : s >= 0.01 ? 2 : Math.min(8, Math.max(2, Math.ceil(-Math.log10(Math.max(s, 1e-9))) + 1));

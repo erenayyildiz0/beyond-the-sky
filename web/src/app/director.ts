@@ -40,7 +40,9 @@ export interface AppContext {
     /** Boyut karşılaştırmasından dönünce uçuş kaldığı yerden sürsün */
     flight?: { C: number[]; f: number[]; u: number[] };
     /** Perde 3: doğum yılı sonucu — yalnızca bellekte (SPEC §6.6, gizlilik) */
-    birth?: import("../science/years").BirthResult | { kind: "skip" } };
+    birth?: import("../science/years").BirthResult | { kind: "skip" };
+    /** Keşif modu (SPEC §2.6) */
+    explore?: boolean };
 }
 
 export type SceneId = "intro" | "act1" | "act2" | "compare" | "act3";

@@ -19,6 +19,7 @@ describe("format (SPEC §6.9, §3.10)", () => {
   it("fmtLightTime", () => {
     const Y = 365.25 * 86400;
     expect(fmtLightTime(1.242)).toBe("1,24 saniye");
+    expect(fmtLightTime(0)).toBe("0 saniye"); expect(fmtLightTime(0, "en")).toBe("0 seconds");
     expect(fmtLightTime(417 / 299792.458)).toBe("0,0014 saniye");
     expect(fmtLightTime(492.2)).toBe("8 dakika 12 saniye");
     expect(fmtLightTime(4.08 * 3600)).toBe("4 saat 5 dakika");

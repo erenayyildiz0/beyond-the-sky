@@ -69,7 +69,7 @@ export class Act3Birth implements Scene {
     const logo = el("div", "outro-logo", "Beyond the Sky", outro);
     const btns = el("div", "outro-btns", undefined, outro);
     const ex = el("button", "next-btn-inline", `${t("outro.explore")} ›`, btns);
-    ex.addEventListener("click", () => { ctx.shared = {}; ctx.director.go("act2"); });
+    ex.addEventListener("click", () => { ctx.shared = { explore: true, birth: ctx.shared.birth }; ctx.director.go("act2"); });   // Git → Senin yıldızın
     const restart = () => { ctx.shared = {}; ctx.director.go("intro"); };          // doğum yılı bellekten silinir
     el("button", "fly-small", t("outro.restart"), btns).addEventListener("click", restart);
     const src = el("button", "fly-small", t("outro.sources"), btns);

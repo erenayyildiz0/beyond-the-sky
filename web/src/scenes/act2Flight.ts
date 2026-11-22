@@ -43,7 +43,9 @@ import { el, show } from "../ui/hud";
 import { getLang, t } from "../ui/i18n";
 import { PickCard, type PickInfo } from "../ui/pickCard";
 import { Ruler } from "../ui/ruler";
-import { getSkyWorld, type SkyWorld } from "./act1Lights";
+import { applySkyState, getSkyWorld, type SkyWorld } from "./act1Lights";
+import { ExploreHud } from "../ui/exploreHud";
+import { JumpMenu, type JumpItem } from "../ui/jumpMenu";
 
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
 const SWITCH_KM = 8;
@@ -373,6 +375,10 @@ export class Act2Flight implements Scene {
   private selected: Target | null = null;
   private homeHold: number | null = null;
   private freeHintS = 0;
+  /** Keşif modu (SPEC §2.6): kapanıştaki "Keşfet", girişteki "Keşfe geç" ya da ?explore=1 */
+  private explore = false;
+  private xhud: ExploreHud | null = null;
+  private jump: JumpMenu | null = null;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
@@ -393,6 +399,8 @@ export class Act2Flight implements Scene {
     ctx.shared.startZ = undefined;
     const saved = ctx.shared.flight;
     ctx.shared.flight = undefined;
+    this.explore = !!(ctx.shared.explore || ctx.params.explore);
+    if (this.explore) ctx.shared.explore = true;                        // boyut karşılaştırmasından dönünce de Keşif
     this.buildUi();
     ctx.input.onTap = (x, y) => this.pick(x, y);
     if (saved) {                                                // boyut karşılaştırmasından dönüş
@@ -405,6 +413,14 @@ export class Act2Flight implements Scene {
       this.C.copy(d).multiplyScalar(10 ** z);
       this.ori.f.copy(baseLook(z) === "forward" ? d : d.clone().negate());
       this.ori.u.copy(freeUpRef(this.C, this.w.space, r.north, r.ngp));
+      this.ori.levelTo(this.ori.u, 1);
+      this.ascentAuto = false;
+      this.moved = true;
+    } else if (this.explore && !ctx.params.goto) {              // Keşif: Güneş'ten 4,2 ışık yılı uzakta, Güneş'e bakarak (§2.6)
+      const st = this.w.stops.find(x => x.key === "nearest")!;
+      this.C.copy(st.pos);
+      this.ori.f.copy(this.C).negate().normalize();
+      this.ori.u.copy(freeUpRef(this.C, this.w.space, this.w.route.north, this.w.route.ngp));
       this.ori.levelTo(this.ori.u, 1);
       this.ascentAuto = false;
       this.moved = true;
@@ -508,6 +524,13 @@ export class Act2Flight implements Scene {
     const starLabels = this.ctx.assets.sky.labels.map(i => ({ i, e: el("div", "body-label star-label", "", root), text: "" }));
     const card = new PickCard(root);
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
+    if (this.explore) {
+      let seen = false;
+      try { seen = localStorage.getItem("bts.tipsSeen") === "1"; } catch { /* özel mod */ }
+      this.xhud = new ExploreHud(root, this.ctx.assets.sky.meta.obs_year_frac, seen);
+      this.jump = new JumpMenu(this.xhud.bar, root, () => this.jumpItems());
+      this.jump.onPick = k => this.jumpTo(k);
+    }
     this.ui = { cosmoNote, toBirth, birth, yourStar, ring, stopCard, starLabels, root, lightVal, dist, ruler, hint, hint2, controls, labels, lblEarth, lblSolar, lblBelts, lblBh, lblStars, lblExposure, lblGalaxy, lblLocal, hereLabel, lblCosmic, lblZoa, lblWeb, lblCmb, bodyLabels, card, extra };
   }
 
@@ -577,7 +600,7 @@ export class Act2Flight implements Scene {
     const m31 = this.w.stops.findIndex(s => s.key === "m31");
     const far = near != null && this.w.stops.findIndex(s => s.key === near) >= m31;       // Andromeda ve ötesindeki duraklar
     this.atM31S = far && !this.plan ? this.atM31S + dt : 0;
-    show(this.ui.toBirth, this.phase === "free" && this.atM31S > 3);          // §6.5.7: kart belirdikten 3 sn sonra
+    show(this.ui.toBirth, !this.explore && this.phase === "free" && this.atM31S > 3);          // §6.5.7: kart belirdikten 3 sn sonra
     const ret = this.phase === "return";
     show(this.ui.controls, !ret); show(this.ui.extra, !ret); show(this.ui.ruler.root, !ret);
     if (!ret) { show(this.ui.yourStar, false); show(this.ui.ring, false); return; }
@@ -704,6 +727,57 @@ export class Act2Flight implements Scene {
     return o.quaternion();
   }
 
+  private tipDone(kind: "look" | "fly" | "tap") {
+    if (this.xhud?.advanceTip(kind)) { try { localStorage.setItem("bts.tipsSeen", "1"); } catch { /* özel mod */ } }
+  }
+
+  /** Git menüsü (SPEC §2.6): sabit liste; "Senin yıldızın" yalnızca doğum yılı girildiyse */
+  private jumpItems(): JumpItem[] {
+    const keys = ["home", "solar", "achird", "cas", "belt", "uma", "pleiades", "deneb", "galaxyOut", "m31"];
+    const b = this.ctx.shared.birth;
+    if (b && (b.kind === "match" || b.kind === "nearest")) keys.push("birth");
+    return keys.map(k => ({ key: k, label: t(`jump.${k}` as "jump.home") }));
+  }
+
+  private static readonly JUMP_HIP: Record<string, number> = { belt: 26311, uma: 62956, pleiades: 17702, deneb: 102098 };  // Alnilam, Alioth, Alcyone, Deneb
+
+  private jumpTo(key: string) {
+    const stop = (k: string) => this.w.stops.findIndex(x => x.key === k);
+    const sky = this.ctx.assets.sky;
+    if (key === "home") return this.flyHomeSky();
+    if (key === "birth") {
+      const b = this.ctx.shared.birth;
+      if (b && (b.kind === "match" || b.kind === "nearest")) this.flyTo(this.starTarget(b.star));
+      return;
+    }
+    const hip = Act2Flight.JUMP_HIP[key];
+    if (hip) {
+      const i = sky.stars.data.findIndex(r => r[7] === hip);
+      if (i >= 0) this.flyTo(this.starTarget(i));
+      return;
+    }
+    const k = key === "solar" ? (stop("kuiper") >= 0 ? "kuiper" : "neptune") : key === "galaxyOut" ? "galaxy" : key;
+    const i = stop(k);
+    if (i >= 0) this.goStop(i);
+  }
+
+  /** Git → Ev: Ankara'nın çatısına iniş; ışıklar kapalı (karanlık gökyüzü), Perde 1'in bakış yönüyle */
+  private flyHomeSky() {
+    if (this.phase === "return") return;
+    applySkyState(this.ctx, this.sw, 1, this.time);
+    const du = this.sw.dome.material.uniforms, su = this.sw.starMat.uniforms;
+    this.act1State = { zen: du.uZenith.value.clone(), hor: du.uHorizon.value.clone(), skyLum: du.uSkyLum.value,
+      sqm: su.uSqm.value, glow: su.uGlowMag.value, k: su.uExtK.value };
+    const view = this.ctx.assets.sky.meta.view;
+    const home = new THREE.Vector3(0, 0, 0);
+    const plan = pointPlan(this.C, home);
+    this.ui.card.hide();
+    this.plan = { t: 0, turnS: 0, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(dirFromAltAz(30, view.az_deg), home) };
+    this.planEndLook = null;
+    this.stopIdx = -1;
+    this.ascentAuto = true;                                    // inince İleri yine yukarı götürür ("Yukarı çık")
+  }
+
   private flyTo(tg: Target) {
     if (this.phase === "return") return;                    // A3_RETURN otomatik; kullanıcı hedefi değiştiremez
     this.ui.card.hide();
@@ -764,6 +838,7 @@ export class Act2Flight implements Scene {
       if (this.plan) this.plan = null;
       this.ori.rotate(-d.dx * hFovDeg(cam) / innerWidth, d.dy * cam.fov / innerHeight);
       this.sinceUser = 0;
+      this.tipDone("look");
       if (altitudeKm(this.C, space) > 20) this.ascentAuto = false;
     }
     // Jiroskop göreli (§6.3): son örnekten bu yana dönüşü bakışa uygula
@@ -790,7 +865,7 @@ export class Act2Flight implements Scene {
     this.wheelT = Math.max(-1.5, Math.min(1.5, this.wheelT * Math.exp(-dt / 0.35) + dz * 4));
     if (Math.abs(this.wheelT) < 0.02) this.wheelT = 0;
     const throttle = Math.max(-1, Math.min(1, this.btnThrottle + keyThrottle + this.wheelT));
-    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; this.ui.card.hide(); }
+    if ((throttle !== 0 || dz !== 0) && this.phase !== "return") { this.plan = null; this.moved = true; this.stopIdx = -1; this.ui.card.hide(); this.tipDone("fly"); }
 
     this.nearStar = nearestStar(this.C, space.starPosLy);
     const sInfo = this.nearStar.i >= 0 ? this.starInfo(this.nearStar.i) : null;
@@ -832,6 +907,10 @@ export class Act2Flight implements Scene {
     this.w.state.bhW = 1 - smoothstep(3e5, 6e5, this.w.state.bhDistRs);   // yörünge ~24.000 Rs'ye uzanır
     this.updateWorlds(z, alt);
     this.updateHud(z, alt, throttle);
+    if (this.xhud) {
+      _v.set(0, 0, 0).project(this.layerCam("deep"));
+      this.xhud.update(dt, this.C.length() / LY_KM, { x: _v.x, y: _v.y, z: _v.z }, getLang(), this.phase === "free" && z < 16.9, !this.ui.stopCard.visible);
+    }
   }
 
   /** R4: en yakın yıldızı gerçek boyutlu disk olarak göster (görünen yarıçap ~1 pikseli geçince) */
@@ -992,7 +1071,7 @@ export class Act2Flight implements Scene {
     // Takımyıldız çizgileri (§6.5.5)
     this.w.bubbleMat.uniforms.uOpacity.value = smoothstep(15.7, 15.9, z) * (1 - smoothstep(16.6, 16.8, z));   // z ∈ [15,9; 16,6]
     this.w.lines.update(smoothstep(11.5, 12.5, z) * (1 - smoothstep(15.6, 16.2, z)), near === "cas" ? 1 : 0);
-    show(this.ui.hint2, !this.ascentAuto && this.moved && this.freeHintS < 6);
+    show(this.ui.hint2, !this.explore && !this.ascentAuto && this.moved && this.freeHintS < 6);   // Keşif'te ipuçları ayrı
     Object.assign(this.ctx.debug, {
       "konum": `${fmtKm(D, lang)} · yükseklik ${fmtKm(Math.max(alt, 0), lang)}`,
       "z": z.toFixed(3),
@@ -1085,6 +1164,7 @@ export class Act2Flight implements Scene {
     }
     const chosen = best as { tg: Target; d: number } | null;
     if (!chosen) { this.ui.card.hide(); return; }
+    this.tipDone("tap");
     this.selected = chosen.tg;
     this.ui.card.open(this.cardInfo(chosen.tg));
   }
