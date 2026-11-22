@@ -574,9 +574,13 @@ export class Act2Flight implements Scene {
   }
 
   private updateBirthUi(z: number, near: string | null, dt: number) {
-    this.atM31S = near === "m31" ? this.atM31S + dt : 0;
+    const m31 = this.w.stops.findIndex(s => s.key === "m31");
+    const far = near != null && this.w.stops.findIndex(s => s.key === near) >= m31;       // Andromeda ve ötesindeki duraklar
+    this.atM31S = far && !this.plan ? this.atM31S + dt : 0;
     show(this.ui.toBirth, this.phase === "free" && this.atM31S > 3);          // §6.5.7: kart belirdikten 3 sn sonra
-    if (this.phase !== "return") { show(this.ui.yourStar, false); show(this.ui.ring, false); return; }
+    const ret = this.phase === "return";
+    show(this.ui.controls, !ret); show(this.ui.extra, !ret); show(this.ui.ruler.root, !ret);
+    if (!ret) { show(this.ui.yourStar, false); show(this.ui.ring, false); return; }
     const i = this.birthStar;
     if (i != null) {
       const P = this.w.space.starPosLy, sky = this.ctx.assets.sky;
@@ -701,6 +705,7 @@ export class Act2Flight implements Scene {
   }
 
   private flyTo(tg: Target) {
+    if (this.phase === "return") return;                    // A3_RETURN otomatik; kullanıcı hedefi değiştiremez
     this.ui.card.hide();
     if (tg.kind === "earth") return this.goStop(0);
     const plan = flyPlan(this.C, tg.posKm, tg.endKm);
@@ -714,7 +719,7 @@ export class Act2Flight implements Scene {
 
   private goStop(i: number) {
     const s = this.w.stops[i];
-    if (!s) return;
+    if (!s || this.phase === "return") return;
     this.ui.card.hide();
     const plan = pointPlan(this.C, s.pos);
     this.plan = { t: 0, turnS: 0, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(s.look, s.pos), stopIdx: i };

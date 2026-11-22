@@ -174,10 +174,25 @@ button { font: inherit; color: inherit; }
 .outro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
   background: rgba(0, 0, 0, .35); }
 .outro:not(.on) { pointer-events: none; }
+/* Görünmeyen düğmeler (#hud button kuralı onları açar) inişte dokunmayı yakalamasın */
+.act3 > :not(.on), .act3 > :not(.on) *, .outro > :not(.on) * { pointer-events: none !important; }
 .outro-line { font-size: var(--size-hero); text-align: center; }
 .outro-logo { letter-spacing: .5em; text-transform: uppercase; font-size: var(--size-small); color: var(--muted); margin-top: 18px; }
 .outro-btns { display: flex; gap: 12px; align-items: center; margin-top: 18px; }
 .outro-btns.on button { pointer-events: auto; }
+.credits { position: absolute; inset: 0; display: flex; flex-direction: column; background: rgba(0, 0, 0, .86); backdrop-filter: blur(6px);
+  padding: calc(20px + var(--safe-t, 0px)) 16px calc(20px + var(--safe-b)); z-index: 5; }
+.credits:not(.on) { pointer-events: none; }
+.credits.on, .credits.on * { pointer-events: auto; }
+.credits-head { display: flex; align-items: center; justify-content: space-between; width: min(720px, 100%); margin: 0 auto 12px; }
+.credits-title { font-size: calc(var(--size-hero) * .6); }
+.credits-body { flex: 1; overflow-y: auto; width: min(720px, 100%); margin: 0 auto; font-size: var(--size-small); line-height: 1.5;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.credits-body h3 { font-size: var(--size-body); color: var(--accent); margin: 18px 0 6px; font-weight: 500; }
+.credits-body ul { margin: 0; padding-left: 18px; color: var(--muted); }
+.credits-body li { margin-bottom: 6px; }
+.credits-privacy { color: #FFE7B0; margin: 0 0 6px; }
+.credits-body .next-btn-inline { margin: 22px 0 8px; }
 .next-btn-inline { border: 1px solid var(--accent); background: rgba(143, 184, 255, .12); border-radius: 999px; padding: 12px 30px; cursor: pointer; }
 .stop-card { position: absolute; left: 50%; bottom: calc(108px + var(--safe-b)); transform: translateX(-50%); width: min(560px, 88vw);
   text-align: center; pointer-events: none; background: rgba(2, 4, 10, .55); border-radius: 12px; padding: 10px 16px; backdrop-filter: blur(4px); }

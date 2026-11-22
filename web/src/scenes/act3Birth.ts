@@ -6,7 +6,8 @@ import { T } from "../app/timeline";
 import { dirFromAltAz } from "../science/coords";
 import { dirKey, trLocative } from "../science/years";
 import { el, show } from "../ui/hud";
-import { t } from "../ui/i18n";
+import { getLang, t } from "../ui/i18n";
+import { credits } from "../content/credits";
 import { applySkyState, getSkyWorld, type SkyWorld } from "./act1Lights";
 
 /**
@@ -24,7 +25,7 @@ export class Act3Birth implements Scene {
   private starDir = new THREE.Vector3();
   private settled = false;
   private turn: { from: { alt: number; az: number }; to: { alt: number; az: number } } | null = null;
-  private ui!: { root: HTMLElement; text: HTMLElement; ring: HTMLElement; arrow: HTMLElement; lights: HTMLElement; outro: HTMLElement; l1: HTMLElement; l2: HTMLElement; logo: HTMLElement; btns: HTMLElement };
+  private ui!: { root: HTMLElement; text: HTMLElement; ring: HTMLElement; arrow: HTMLElement; lights: HTMLElement; outro: HTMLElement; l1: HTMLElement; l2: HTMLElement; logo: HTMLElement; btns: HTMLElement; creditsEl: HTMLElement };
 
   enter(ctx: AppContext) {
     this.ctx = ctx;
@@ -69,12 +70,34 @@ export class Act3Birth implements Scene {
     const btns = el("div", "outro-btns", undefined, outro);
     const ex = el("button", "next-btn-inline", `${t("outro.explore")} ›`, btns);
     ex.addEventListener("click", () => { ctx.shared = {}; ctx.director.go("act2"); });
-    const rs = el("button", "fly-small", t("outro.restart"), btns);
-    rs.addEventListener("click", () => { ctx.shared = {}; ctx.director.go("intro"); });
-    this.ui = { root, text: textEl, ring, arrow, lights, outro, l1, l2, logo, btns };
+    const restart = () => { ctx.shared = {}; ctx.director.go("intro"); };          // doğum yılı bellekten silinir
+    el("button", "fly-small", t("outro.restart"), btns).addEventListener("click", restart);
+    const src = el("button", "fly-small", t("outro.sources"), btns);
+    const creditsEl = this.buildCredits(root, restart);
+    src.addEventListener("click", () => { ctx.director.setState("CREDITS"); show(creditsEl, true); });
+    this.ui = { root, text: textEl, ring, arrow, lights, outro, l1, l2, logo, btns, creditsEl };
     ctx.audio?.swell();                                          // A3_LAND
     if (ctx.gyro.active && this.star != null) textEl.textContent += " " + t("act3.turn");
     requestAnimationFrame(() => show(textEl, !!text));
+  }
+
+  /** CREDITS (SPEC §6.7): kaydırılabilir panel — kaynaklar ve lisanslar, model notları, gizlilik notu, Baştan başla */
+  private buildCredits(root: HTMLElement, restart: () => void) {
+    const panel = el("div", "credits", undefined, root);
+    const head = el("div", "credits-head", undefined, panel);
+    el("div", "credits-title", t("outro.sources"), head);
+    const close = el("button", "fly-small", t("credits.close"), head);
+    close.addEventListener("click", () => { this.ctx.director.setState("OUTRO"); show(panel, false); });
+    const body = el("div", "credits-body", undefined, panel);
+    el("p", "credits-privacy", t("credits.privacy"), body);
+    for (const sec of credits(getLang())) {
+      el("h3", "", sec.title, body);
+      const ul = el("ul", "", undefined, body);
+      for (const it of sec.items) el("li", "", it, ul);
+    }
+    el("button", "next-btn-inline", t("outro.restart"), body).addEventListener("click", restart);
+    panel.addEventListener("pointerdown", e => e.stopPropagation());
+    return panel;
   }
 
   onAction(a: Action) {
@@ -122,12 +145,13 @@ export class Act3Birth implements Scene {
   /** Halka (18 px, nefes alır) ya da ekran dışındaysa kenarda yön oku (SPEC §6.6) */
   private placeRing() {
     const { ring, arrow } = this.ui;
-    if (this.star == null || this.t > T.act3.landHold + T.act3.lightsOnS + 3) { show(ring, false); show(arrow, false); return; }
+    if (this.star == null) { show(ring, false); show(arrow, false); return; }
+    const outro = this.t > T.act3.landHold + T.act3.lightsOnS + 3;               // halka kapanışta da kalır, ok kalkar
     const v = this.starDir.clone().multiplyScalar(900).project(this.cam);
     const behind = v.z > 1;
     const W = innerWidth, H = innerHeight;
     const on = !behind && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.92;
-    show(ring, on); show(arrow, !on);
+    show(ring, on); show(arrow, !on && !outro);
     if (on) {
       const s = 1 + 0.12 * Math.sin(this.t * 2.5);
       ring.style.transform = `translate(${(v.x + 1) / 2 * W}px, ${(1 - v.y) / 2 * H}px) translate(-50%, -50%) scale(${s})`;
