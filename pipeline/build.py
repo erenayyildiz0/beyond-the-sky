@@ -243,6 +243,12 @@ def main() -> None:
         sizes.update({p.name: p.stat().st_size for p in written})
     from bts.preview import build_previews
     build_previews(m, cfg.path(cfg.preview_dir), altaz8)
+    # §6.10: WebGL yoksa gösterilen statik görüntü — varsayılan bakış yönünde karanlık gökyüzü
+    fb = cfg.path(cfg.preview_dir) / f"view_landscape_az{round(m.sky['meta']['view']['az_deg']):03d}_dark.png"
+    if fb.exists():                                  # üstteki hata ayıklama yazısı kırpılır; etiket web'de
+        from PIL import Image
+        im = Image.open(fb)
+        im.crop((0, 24, im.width, im.height)).save(out.parent / "fallback_landscape.png", optimize=True)
     summary(m)
     print("\nÇıktılar: " + " · ".join(f"{k} {v / 1e6:.2f} MB" for k, v in sizes.items()))
     print(f"Süre: {_time.time() - t0:.1f} sn")

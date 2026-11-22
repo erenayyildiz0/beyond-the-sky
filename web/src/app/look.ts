@@ -21,7 +21,7 @@ export function frameSkyCamera(cam: THREE.PerspectiveCamera, w: number, h: numbe
 export const hFovDeg = (cam: THREE.PerspectiveCamera) =>
   2 * Math.atan(Math.tan((cam.fov / 2) * DEG) * cam.aspect) / DEG;
 
-const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+import { reducedMotion } from "./motion";
 
 /** Perde 1 ve 3 bakışı: (alt, az) çifti, sürükleme + atalet + ok tuşları + boşta nefes. */
 export class SkyLook {

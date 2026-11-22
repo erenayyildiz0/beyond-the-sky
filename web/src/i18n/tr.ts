@@ -96,6 +96,7 @@ export const tr = {
   "gyro.off": "Jiroskop kapalı",
   "gyro.fixNorth": "Kuzeyi düzeltmek için yana sürükle",
   "fallback.webgl": "Bu deneyim WebGL gerektiriyor. Güncel bir tarayıcıda açmayı dene.",
+  "fallback.caption": "Simülasyon · Ankara, bu gece 21:00, ışıklar sönükken",
   "act2.light": "Işığın {place_ablative} buraya ulaşması",
   "act2.home": "Evden uzaklık",
   "act2.ly": "ışık yılı",

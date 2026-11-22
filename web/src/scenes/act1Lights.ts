@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { FpsProbe, PERF } from "../app/motion";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { bindHoldButton, HoldControl } from "../app/input";
@@ -177,9 +178,12 @@ export class Act1Lights implements Scene {
     }
   }
 
+  private probe = new FpsProbe();
   update(dt: number) {
     this.t += dt;
     const { ctx, hold } = this;
+    // §6.10: ilk 2 saniyede ortalama fps < 40 ise DPR 1 (galaksiler telefon sayılarıyla kurulur: motion.lightGeometry)
+    if (this.probe.step(dt) && PERF.low) { ctx.renderer.setPixelRatio(1); ctx.debug["düşük performans"] = "evet (DPR 1)"; }
     const { sky } = ctx.assets;
     const tune = ctx.tune;
 

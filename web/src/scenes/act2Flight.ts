@@ -44,6 +44,7 @@ import { getLang, t } from "../ui/i18n";
 import { PickCard, type PickInfo } from "../ui/pickCard";
 import { Ruler } from "../ui/ruler";
 import { applySkyState, getSkyWorld, type SkyWorld } from "./act1Lights";
+import { lightGeometry, motionScale } from "../app/motion";
 import { ExploreHud } from "../ui/exploreHud";
 import { SearchPanel, type SearchEntry } from "../ui/search";
 import { createLightRay } from "../render/lightRay";
@@ -178,7 +179,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     { key: "voyager", name: t("body.voyager"), posKm: voyKm, endKm: 50_000, kind: "body" },
   ];
   // --- R2: galaksiler (temsili çizim; konum, yön ve boyut gerçek) ---
-  const phone = matchMedia("(pointer: coarse)").matches;
+  const phone = lightGeometry();                                   // telefon ya da düşük performans (§6.10)
   const v3 = (a: number[]) => enuToThree(a[0], a[1], a[2]);
   const g = sky.frames.gal_to_enu;
   const gx = v3([g[0][0], g[1][0], g[2][0]]).normalize(), gy = v3([g[0][1], g[1][1], g[2][1]]).normalize(), gz = v3([g[0][2], g[1][2], g[2][2]]).normalize();
@@ -337,7 +338,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
       nearFar: v => [Math.max(1e-5, v.length() * 1e-3), v.length() * 10 + 5000] });
     // R5: 2MRS'in ötesi (temsili) ve gözlemlenebilir evrenin sınırı (Planck CMB)
     const webMat = c.material.clone();
-    const phone = matchMedia("(pointer: coarse)").matches;
+    const phone = lightGeometry();
     const web = createProceduralWeb(phone ? 60_000 : 200_000, cosmicMeta?.max_mly ?? 1400, CMB_DIST_MLY * 0.97, webMat);
     c.scene.add(web.pts);
     const cmb = createCmbSphere(CMB_DIST_MLY, sky.frames.gal_to_enu);
@@ -630,7 +631,7 @@ export class Act2Flight implements Scene {
     this.ctx.director.setState("A3_RETURN");
     const home = this.w.stops[0];
     const plan = pointPlan(this.C, home.pos);
-    this.plan = { t: 0, turnS: 0, dur: T.act3.returnS, at: plan.at, q0: this.q.clone(), q1: this.quatFor(home.look, home.pos) };
+    this.plan = { t: 0, turnS: 0, dur: T.act3.returnS * motionScale(), at: plan.at, q0: this.q.clone(), q1: this.quatFor(home.look, home.pos) };
     if (this.birthStar != null) {
       this.ui.yourStar.textContent = t("act3.yourStar", { name: sky.starName(this.birthStar) ?? "" });
       const P = this.w.space.starPosLy, i = this.birthStar;
@@ -953,7 +954,7 @@ export class Act2Flight implements Scene {
     const home = new THREE.Vector3(0, 0, 0);
     const plan = pointPlan(this.C, home);
     this.ui.card.hide();
-    this.plan = { t: 0, turnS: 0, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(dirFromAltAz(30, view.az_deg), home) };
+    this.plan = { t: 0, turnS: 0, dur: plan.dur * motionScale(), at: plan.at, q0: this.q.clone(), q1: this.quatFor(dirFromAltAz(30, view.az_deg), home) };
     this.planEndLook = null;
     this.stopIdx = -1;
     this.ascentAuto = true;                                    // inince İleri yine yukarı götürür ("Yukarı çık")
@@ -965,7 +966,7 @@ export class Act2Flight implements Scene {
     if (tg.kind === "earth") return this.goStop(0);
     const plan = flyPlan(this.C, tg.posKm, tg.endKm);
     const end = plan.at(1);
-    this.plan = { t: 0, turnS: 0.8, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(tg.posKm.clone().sub(this.C), this.C) };
+    this.plan = { t: 0, turnS: 0.8 * motionScale(), dur: plan.dur * motionScale(), at: plan.at, q0: this.q.clone(), q1: this.quatFor(tg.posKm.clone().sub(this.C), this.C) };
     this.planEndLook = { pos: end, target: tg.posKm };
     this.flyTarget = tg;
     this.stopIdx = -1;
@@ -978,7 +979,7 @@ export class Act2Flight implements Scene {
     if (!s || this.phase === "return") return;
     this.ui.card.hide();
     const plan = pointPlan(this.C, s.pos);
-    this.plan = { t: 0, turnS: 0, dur: plan.dur, at: plan.at, q0: this.q.clone(), q1: this.quatFor(s.look, s.pos), stopIdx: i };
+    this.plan = { t: 0, turnS: 0, dur: plan.dur * motionScale(), at: plan.at, q0: this.q.clone(), q1: this.quatFor(s.look, s.pos), stopIdx: i };
     this.planEndLook = null;
     this.flyTarget = null;
     this.ascentAuto = false;

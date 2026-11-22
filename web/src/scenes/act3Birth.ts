@@ -3,6 +3,7 @@ import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
 import { frameSkyCamera, hFovDeg, SkyLook } from "../app/look";
 import { T } from "../app/timeline";
+import { reducedMotion } from "../app/motion";
 import { dirFromAltAz } from "../science/coords";
 import { dirKey, trLocative } from "../science/years";
 import { el, show } from "../ui/hud";
@@ -153,7 +154,7 @@ export class Act3Birth implements Scene {
     const on = !behind && Math.abs(v.x) < 0.92 && Math.abs(v.y) < 0.92;
     show(ring, on); show(arrow, !on && !outro);
     if (on) {
-      const s = 1 + 0.12 * Math.sin(this.t * 2.5);
+      const s = reducedMotion() ? 1 : 1 + 0.12 * Math.sin(this.t * 2.5);     // nefes (azaltılmış harekette yok)
       ring.style.transform = `translate(${(v.x + 1) / 2 * W}px, ${(1 - v.y) / 2 * H}px) translate(-50%, -50%) scale(${s})`;
     } else {
       let ax = v.x, ay = v.y;

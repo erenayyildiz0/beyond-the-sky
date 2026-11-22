@@ -97,6 +97,7 @@ export const en: Record<Key, string> = {
   "gyro.off": "Motion off",
   "gyro.fixNorth": "Drag sideways to fix north",
   "fallback.webgl": "This experience needs WebGL. Try a current browser.",
+  "fallback.caption": "Simulation · Ankara, tonight at 9 pm, lights off",
   "act2.light": "Light from {place} to here",
   "act2.home": "Distance from home",
   "act2.ly": "light-years",

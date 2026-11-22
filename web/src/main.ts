@@ -3,6 +3,7 @@ import { loadAssets, readParams } from "./app/assets";
 import { Director, type AppContext, type Tunables } from "./app/director";
 import { Input } from "./app/input";
 import { AdaptiveRes } from "./app/adaptiveRes";
+import { PERF } from "./app/motion";
 import { STAR_TIME } from "./render/starSurface";
 import { createRenderer } from "./app/renderer";
 import { STAR_DEFAULTS } from "./render/stars";
@@ -28,7 +29,12 @@ async function main() {
 
   const renderer = createRenderer(canvas);
   if (!renderer) {
-    el("div", "fallback", t("fallback.webgl"), hud);
+    // §6.10: WebGL yoksa bu gecenin karanlık gökyüzünün statik görüntüsü (pipeline önizlemesi) + kısa açıklama
+    const fb = el("div", "fallback", undefined, hud);
+    const img = el("img", "fallback-img", undefined, fb);
+    img.src = `${import.meta.env.BASE_URL}fallback_landscape.png`; img.alt = t("fallback.caption");
+    el("div", "fallback-cap", t("fallback.caption"), fb);
+    el("div", "fallback-text", t("fallback.webgl"), fb);
     return;
   }
 
@@ -112,6 +118,7 @@ async function main() {
     upd += (t1 - t0 - upd) * 0.1; ren += (t2 - t1 - ren) * 0.1;
     ctx.debug["kare (ms)"] = `güncelleme ${upd.toFixed(1)} · çizim ${ren.toFixed(1)}`;
     panel.update(dt, now);
+    if (PERF.low && res.max > 1) { res.max = 1; res.pr = Math.min(res.pr, 1); }   // §6.10: düşük performansta DPR en fazla 1
     const pr = res.step(dt);
     if (pr !== null) renderer.setPixelRatio(pr);
     requestAnimationFrame(loop);

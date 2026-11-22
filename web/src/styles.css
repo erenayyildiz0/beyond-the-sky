@@ -324,3 +324,12 @@ button { font: inherit; color: inherit; }
 .act2 > .mission-toast.on, .act2 > .mission-toast.on * { pointer-events: auto; }
 .mission-done { color: #FFE7B0; font-size: var(--size-small); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; }
 .mission-note { font-size: calc(var(--size-body) * 1.05); line-height: 1.4; margin-bottom: 10px; }
+.fallback { gap: 16px; align-content: center; }
+.fallback-img { max-width: min(960px, 100%); max-height: 70vh; border-radius: 8px; }
+.fallback-text { max-width: 520px; color: var(--muted); }
+.fallback-cap { font-size: var(--size-small); color: var(--muted); margin-top: -8px; }
+
+/* SPEC §6.10: azaltılmış hareket — yanıp sönme ve nefes yok, geçişler kısa */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: .2s !important; }
+}
