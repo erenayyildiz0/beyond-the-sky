@@ -234,6 +234,8 @@ export const tr = {
   "compare.smaller": "Küçük",
   "compare.bigger": "Büyük",
   "compare.back": "Uçuşa dön",
+  "compare.horizon": "Olay ufku yarıçapı",
+  "compare.shadow": "gölgesi {km}",
   "compare.radius": "Yarıçap",
   "compare.earthTimes": "Dünya'dan {n} kat küçük",
   "compare.vsEarth": "Dünya'nın {n} katı",

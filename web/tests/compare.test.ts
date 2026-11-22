@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { ITEMS } from "../src/scenes/compare";
+import { ITEMS, SHADOW_RS, visualRadius } from "../src/scenes/compare";
 
 describe("boyut karşılaştırması (R4)", () => {
-  it("cisimler yarıçapa göre küçükten büyüğe, hepsi kaynaklı", () => {
-    for (let i = 1; i < ITEMS.length; i++) expect(ITEMS[i].rKm, ITEMS[i].key).toBeGreaterThan(ITEMS[i - 1].rKm);
+  it("cisimler görünen yarıçapa göre küçükten büyüğe (kara delikte gölge), hepsi kaynaklı", () => {
+    for (let i = 1; i < ITEMS.length; i++) expect(visualRadius(ITEMS[i]), ITEMS[i].key).toBeGreaterThan(visualRadius(ITEMS[i - 1]));
     for (const it of ITEMS) expect(it.source.length, it.key).toBeGreaterThan(3);
   });
   it("Betelgeuse Güneş'in 764 katı, VY CMa 1.420 katı", () => {
@@ -26,5 +26,11 @@ describe("sıkı cisimler", () => {
     const r = (k: string) => ITEMS.find(x => x.key === k)!.rKm;
     expect(r("siriusb")).toBeLessThan(r("earth"));
     expect(r("sgra")).toBeLessThan(r("arcturus"));
+  });
+  it("kara delik gölgesi 3√3/2 Rs; Sgr A*'nın gölgesi Aldebaran'dan büyük, Rigel'den küçük — sıra buna göre", () => {
+    expect(SHADOW_RS).toBeCloseTo(2.598, 3);
+    const k = (key: string) => ITEMS.findIndex(x => x.key === key);
+    expect(k("sgra")).toBeGreaterThan(k("aldebaran"));
+    expect(k("sgra")).toBeLessThan(k("rigel"));
   });
 });

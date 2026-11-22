@@ -31,15 +31,15 @@ const bhR = (mSun: number) => mSun * RS_KM_PER_MSUN;
 const ANTARES_R_SUN = (37.38 / 2) / 5.89 * 215.032;
 
 const NASA = "NASA Planetary Fact Sheet";
-export const ITEMS: Item[] = [
+const RAW: Item[] = [
   { key: "psr", tr: "Pulsar PSR J0030+0451", en: "Pulsar PSR J0030+0451", rKm: 12.71, source: "Riley ve ark. 2019, ApJL 887, L21 (NICER)",
     look: { pulsarHz: 205.53 },
     note: { tr: "Nötron yıldızı: 1,34 Güneş kütlesi bir şehir boyutunda; saniyede 205 tur döner (burada çok yavaşlatıldı). Işın demetleri temsili.",
             en: "Neutron star: 1.34 solar masses in a city-sized ball, spinning 205 times a second (slowed down here). Beams are illustrative." } },
   { key: "cygx1", tr: "Cygnus X-1 (kara delik)", en: "Cygnus X-1 (black hole)", rKm: bhR(21.2), source: "Miller-Jones ve ark. 2021, Science 371, 1046 (21,2 M☉); Rs = 2GM/c²",
     look: { bh: true },
-    note: { tr: "Olay ufku yarıçapı. Işığın bükülmesi Schwarzschild çözümünden hesaplanır; toplanma diski temsili.",
-            en: "Event-horizon radius. Light bending is computed from the Schwarzschild solution; the accretion disc is illustrative." } },
+    note: { tr: "Siyah daire kara deliğin gölgesi: olay ufkunun ~2,6 katı. Işığın bükülmesi Schwarzschild çözümünden hesaplanır.",
+            en: "The black disc is the black hole's shadow: ~2.6 times its event horizon. Light bending is computed from the Schwarzschild solution." } },
   { key: "moon", tr: "Ay", en: "Moon", rKm: MOON_RADIUS_KM, source: NASA, look: { kind: 0, color: "#a0a0a0", map: "moon_2k.jpg" } },
   { key: "mercury", tr: "Merkür", en: "Mercury", rKm: PLANET_RADIUS_KM.mercury, source: NASA, look: { kind: 1, color: "#8C8780", map: "planet_mercury.jpg" } },
   { key: "mars", tr: "Mars", en: "Mars", rKm: PLANET_RADIUS_KM.mars, source: NASA, look: { kind: 3, color: "#C26B40", map: "planet_mars.jpg" } },
@@ -74,8 +74,17 @@ export const ITEMS: Item[] = [
     note: { tr: "İlk fotoğraflanan kara delik (2019). Olay ufku Güneş Sistemi'nin gezegenlerini rahatça içine alır.",
             en: "The first black hole ever imaged (2019). Its event horizon would swallow every planetary orbit of the Solar System." } },
 ];
-/** Yerleşim ve çerçeve çarpanları: kara deliğin diski ve gölgesi, pulsarın ışınları yarıçapın dışına taşar */
-const EXT = (it: Item) => ("bh" in it.look ? 9 : "pulsarHz" in it.look ? 3 : 1);
+/**
+ * Görünen yarıçap: kara delikte gölge (Schwarzschild foton yakalama yarıçapı b = (3√3/2) Rs ≈ 2,6 Rs), diğerlerinde yarıçap.
+ * Sıra ve ekrandaki boyut buna göre: olay ufkuna göre sıralayınca Sgr A* (gölgesi ~33 milyon km) kendinden "büyük" Arcturus'tan
+ * büyük görünüyordu. Toplanma diski bu ekranda çizilmez (temsiliydi ve görünen boyutu şişiriyordu).
+ */
+export const SHADOW_RS = 3 * Math.sqrt(3) / 2;
+export const visualRadius = (it: Item) => ("bh" in it.look ? it.rKm * SHADOW_RS : it.rKm);
+export const ITEMS: Item[] = [...RAW].sort((a, b) => visualRadius(a) - visualRadius(b));
+
+/** Yerleşim ve çerçeve çarpanları: kara deliğin bükülme bölgesi ve pulsarın ışınları yarıçapın dışına taşar */
+const EXT = (it: Item) => ("bh" in it.look ? 6 : "pulsarHz" in it.look ? 3 : 1);
 const FRAME = (it: Item) => ("bh" in it.look ? 3 : 1);
 // Yıldız sıcaklıkları (yalnızca renk için): Sirius A 9.940 K, Arcturus 4.286 K (Ramírez & Allende Prieto 2011),
 // Aldebaran 3.910 K, Rigel 12.100 K (Przybilla 2006), Betelgeuse ~3.600 K (Levesque 2005), VY CMa 3.490 K (Wittkowski 2012),
@@ -132,10 +141,9 @@ export class Compare implements Scene {
     }
     if ("bh" in it.look) {
       // Disk ekvator düzleminde, bize ~75° eğik (temsili); efekt karesi 9 Rs
-      // Tam jeodezik hesap 10 Rs içinde (gölge, foton halkası ve disk orada); dışında zayıf alan sapması
-      const n = new THREE.Vector3(0, 1, 0.27).normalize();
-      const mesh = createBlackHole(new THREE.Vector3(x, 0, 0), it.rKm, { diskN: n, diskOut: 8, halfRs: 9, disk: 1.8, rm: 10 }).mesh;
-      this.holes.push({ mesh, sphere: new THREE.Sphere(new THREE.Vector3(x, 0, 0), 13 * it.rKm) });
+      // Gölge, foton halkası ve arka planın bükülmesi (disk yok: görünen boyut gölgedir). Tam jeodezik hesap 10 Rs içinde
+      const mesh = createBlackHole(new THREE.Vector3(x, 0, 0), it.rKm, { halfRs: 6, disk: 0, rm: 10 }).mesh;
+      this.holes.push({ mesh, sphere: new THREE.Sphere(new THREE.Vector3(x, 0, 0), 9 * it.rKm) });
       return mesh;
     }
     if ("star" in it.look) {
@@ -229,7 +237,9 @@ export class Compare implements Scene {
     const rel = vsSun >= 0.5 ? t("compare.vsSun", { n: fmtDec(vsSun, vsSun < 10 ? 2 : 0, lang) })
       : vsEarth < 0.05 ? t("compare.earthTimes", { n: fmtInt(1 / vsEarth, lang) })
       : t("compare.vsEarth", { n: fmtDec(vsEarth, vsEarth < 10 ? 2 : 1, lang) });
-    this.ui.size.textContent = `${t("compare.radius")}: ${fmtKm(cur.rKm, lang)} · ${rel}`;
+    this.ui.size.textContent = "bh" in cur.look
+      ? `${t("compare.horizon")}: ${fmtKm(cur.rKm, lang)} · ${t("compare.shadow", { km: fmtKm(visualRadius(cur), lang) })} · ${rel}`
+      : `${t("compare.radius")}: ${fmtKm(cur.rKm, lang)} · ${rel}`;
     this.ui.src.textContent = `${t("compare.source")}: ${cur.source}`;
     annotateInto(this.ui.note, cur.note ? cur.note[lang] : "");
   }
@@ -239,9 +249,9 @@ export class Compare implements Scene {
   private placeLabels() {
     const v = this.v;
     ITEMS.forEach((it, i) => {
-      v.set(this.x[i], -it.rKm * 1.15, 0).project(this.cam);
+      v.set(this.x[i], -visualRadius(it) * 1.15, 0).project(this.cam);
       const px = (v.x + 1) / 2 * innerWidth, py = (1 - v.y) / 2 * innerHeight;
-      const big = it.rKm / (this.cam.position.z * Math.tan(this.cam.fov * Math.PI / 360)) * innerHeight / 2;   // görünen yarıçap (px)
+      const big = visualRadius(it) / (this.cam.position.z * Math.tan(this.cam.fov * Math.PI / 360)) * innerHeight / 2;   // görünen yarıçap (px)
       const vis = v.z < 1 && px > -100 && px < innerWidth + 100 && big > 3;
       show(this.ui.labels[i], vis);
       if (vis && v.z > -1) {

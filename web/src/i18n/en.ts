@@ -235,6 +235,8 @@ export const en: Record<Key, string> = {
   "compare.smaller": "Smaller",
   "compare.bigger": "Bigger",
   "compare.back": "Back to flight",
+  "compare.horizon": "Event-horizon radius",
+  "compare.shadow": "shadow {km}",
   "compare.radius": "Radius",
   "compare.earthTimes": "{n} times smaller than Earth",
   "compare.vsEarth": "{n} × Earth",
