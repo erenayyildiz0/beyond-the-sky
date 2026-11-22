@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { capFirst, placeVars } from "../ui/place";
 import { FpsProbe, PERF } from "../app/motion";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
@@ -28,6 +29,8 @@ export interface SkyWorld {
 }
 
 let world: SkyWorld | null = null;
+/** Gökyüzü dünyası kuruldu mu (E1: kurulduktan sonra konum değişikliği yeniden yükleme ister) */
+export const hasSkyWorld = () => world != null;
 
 export function getSkyWorld(ctx: AppContext): SkyWorld {
   if (world) return world;
@@ -115,14 +118,14 @@ export class Act1Lights implements Scene {
     const m = sky.meta, lang = getLang();
     const root = el("div", "act1", undefined, this.ctx.hud);
     const place = el("div", "place", t("intro.place", {
-      place: m.location.name, date: fmtDate(m.time_local, m.tz, lang), time: fmtTime(m.time_local, m.tz, lang),
+      place: placeVars(m).label, date: fmtDate(m.time_local, m.tz, lang), time: fmtTime(m.time_local, m.tz, lang),
     }), root);
     onMultiTap(place, 3, () => window.dispatchEvent(new CustomEvent("bts:toggleDebug")));
     el("div", "badge", t("act1.badge"), root);
     const tonight = isTonight(m.time_local, m.tz);
     const center = el("div", "center-text poem", tonight
-      ? t("act1.now.tonight", { place_ablative: m.location.name_ablative, place: m.location.name })
-      : t("act1.now.date", { place_ablative: m.location.name_ablative, place: m.location.name, date: fmtDayMonth(m.time_local, m.tz, lang) }),
+      ? capFirst(t("act1.now.tonight", placeVars(m)))
+      : capFirst(t("act1.now.date", { ...placeVars(m), date: fmtDayMonth(m.time_local, m.tz, lang) })),
       root);
     const hint = el("div", "hint", t("act1.drag"), root);
     const count = el("div", "count", "", root);

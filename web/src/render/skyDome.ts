@@ -5,6 +5,13 @@ import { enuToThree } from "../science/coords";
 import { MW_FLOOR, MW_SLOPE } from "../science/visibility";
 import type { Sky } from "../app/assets";
 
+/** three.js yönü → ICRS: icrs = Mᵀ · enu, enu = (x, −z, y) */
+function threeToIcrs(sky: Sky) {
+  const M = sky.frames.icrs_to_enu, P = [[1, 0, 0], [0, 0, -1], [0, 1, 0]];
+  const A = [0, 1, 2].map(i => [0, 1, 2].map(j => M[0][i] * P[0][j] + M[1][i] * P[1][j] + M[2][i] * P[2][j]));
+  return new THREE.Matrix3().set(A[0][0], A[0][1], A[0][2], A[1][0], A[1][1], A[1][2], A[2][0], A[2][1], A[2][2]);
+}
+
 /** Gökyüzü kubbesi: Samanyolu + gökyüzü rengi + Andromeda lekesi (SPEC §6.4). */
 export function createSkyDome(sky: Sky, milkyWay: THREE.Texture) {
   const m31 = sky.galaxies.find(g => g.key === "m31")!;
@@ -19,6 +26,8 @@ export function createSkyDome(sky: Sky, milkyWay: THREE.Texture) {
     depthTest: false,
     uniforms: {
       uMW: { value: milkyWay },
+      // E1: cihaz konumunda doku göksel koordinatlarda; yön ICRS'e döndürülerek örneklenir
+      uIcrs: { value: milkyWay.userData.icrs ? 1 : 0 }, uThreeToIcrs: { value: threeToIcrs(sky) },
       uMWOpacity: { value: 0 },
       uMWGain: { value: 1 },
       uSkyLum: { value: 1 },

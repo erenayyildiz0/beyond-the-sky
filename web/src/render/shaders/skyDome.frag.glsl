@@ -1,5 +1,7 @@
 // SPEC §6.4 — hava kütlesi formülü §3.3 ile aynı
 uniform sampler2D uMW;
+uniform float uIcrs;          // 1: doku göksel (ICRS) eşdikdörtgen, merkez 0h, RA sola artar (E1, cihaz konumu)
+uniform mat3 uThreeToIcrs;    // three.js yönü → ICRS
 uniform float uMWOpacity, uMWGain, uExtK, uSpace;
 uniform float uSkyLum, uMWFloor, uMWSlope;   // Samanyolu kontrast eşiği (visibility.ts mwThreshold ile aynı)
 uniform vec3 uZenith, uHorizon;
@@ -14,6 +16,10 @@ void main() {
   float az = atan(d.x, -d.z);
   if (az < 0.0) az += 6.28318530718;
   vec2 uv = vec2(az / 6.28318530718, 0.5 + alt / 3.14159265359);   // v=1 görüntünün üstü
+  if (uIcrs > 0.5) {
+    vec3 e = uThreeToIcrs * d;
+    uv = vec2(fract(0.5 - atan(e.y, e.x) / 6.28318530718), 0.5 + asin(clamp(e.z, -1.0, 1.0)) / 3.14159265359);
+  }
   float altDeg = alt * 57.29577951308232;
   float ext = 1.0;
   if (uSpace < 0.5) {

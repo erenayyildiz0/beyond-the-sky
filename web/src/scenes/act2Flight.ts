@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { placeVars } from "../ui/place";
 import { annotateInto } from "../ui/glossary";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
@@ -236,7 +237,7 @@ function getFlightWorld(ctx: AppContext): FlightWorld {
     .multiplyScalar(SGRA_DIST_PC * PC_LY * LY_KM);
   const los = sgraKm.clone().normalize();
   const diskN = los.clone().negate().multiplyScalar(Math.cos(0.7)).addScaledVector(gz, Math.sin(0.7)).normalize();
-  const bh = createBlackHole(new THREE.Vector3(), 1, { diskN, diskOut: 14, halfRs: 60, mw: milkyWay, disk: 3 });
+  const bh = createBlackHole(new THREE.Vector3(), 1, { diskN, diskOut: 14, halfRs: 60, mw: milkyWay.userData.icrs ? null : milkyWay, disk: 3 });   // alt-az eşlemeli
   bh.mat.uniforms.uMWGain.value = 0.3;
   const bhScene = new THREE.Scene();
   bhScene.add(bh.mesh);
@@ -480,7 +481,7 @@ export class Act2Flight implements Scene {
     const root = el("div", "act2", undefined, this.ctx.hud);
     const m = this.ctx.assets.sky.meta;
     const light = el("div", "light-counter on", undefined, root);
-    el("div", "light-label", t("act2.light", { place_ablative: m.location.name_ablative, place: m.location.name }), light);
+    el("div", "light-label", t("act2.light", placeVars(m)), light);
     const lightVal = el("div", "light-value", "", light);
     const dist = el("div", "light-dist", "", light);
     const cosmoNote = el("div", "light-dist cosmo-note", t("act2.cosmoNote"), light);
@@ -866,7 +867,7 @@ export class Act2Flight implements Scene {
     if (sp?.cls) lines.push(t(`lum.${sp.cls}` as "lum.V"));
     if (dly != null) lines.push(t("card.voyager", { n: fmtInt(+voyagerYears(dly).toPrecision(3), lang) }));
     const tn = tonight(mag, sky.starAlt[i], sky.meta.visibility);
-    lines.push(t(`card.tonight.${tn}` as "card.tonight.city"));
+    lines.push(t(`card.tonight.${tn}` as "card.tonight.city", placeVars(sky.meta)));
     if (dly == null) lines.push(t("card.nodist"));
     if (tg.note) lines.push(tg.note);
     if (dly != null) lines.push(t("card.repGlow"));                         // yakından görünüm temsili (§6.11)
@@ -951,7 +952,7 @@ export class Act2Flight implements Scene {
     const keys = ["home", "solar", "achird", "cas", "belt", "uma", "pleiades", "deneb", "galaxyOut", "m31"];
     const b = this.ctx.shared.birth;
     if (b && (b.kind === "match" || b.kind === "nearest")) keys.push("birth");
-    return keys.map(k => ({ key: k, label: t(`jump.${k}` as "jump.home") }));
+    return keys.map(k => ({ key: k, label: t(`jump.${k}` as "jump.home", placeVars(this.ctx.assets.sky.meta)) }));
   }
 
   private static readonly JUMP_HIP: Record<string, number> = { belt: 26311, uma: 62956, pleiades: 17702, deneb: 102098 };  // Alnilam, Alioth, Alcyone, Deneb
@@ -1017,12 +1018,27 @@ export class Act2Flight implements Scene {
     this.ascentAuto = false; this.moved = true;
   }
 
-  /** Cetvel sürüklenirken etiket: uzaklık ve yakındaki durak */
+  /**
+   * Cetvel sürüklenirken etiket: uzaklık ve yakındaki durak; ışığın oradan yola çıktığı yıl; o yılın olayı (tarih çapası).
+   * Böylece uzaklık takvimle eşleşir: "57,9 ışık yılı · Işık 1969'da yola çıktı · Apollo 11 Ay'a indi".
+   */
   private describeZ(z: number) {
-    const lang = getLang(), km = 10 ** z, ly = km / LY_KM;
+    const lang = getLang(), km = 10 ** z, ly = km / LY_KM, Dmly = km / MLY_KM;
     const dist = ly >= 0.01 ? `${fmtLy(ly, lang)} ${t("act2.ly")}` : fmtKm(km, lang);
     const near = this.w.stops.reduce((b, x) => (Math.abs(x.z - z) < Math.abs(b.z - z) ? x : b));
-    return Math.abs(near.z - z) < 0.25 ? `${dist} · ${t("ruler.around", { stop: t(`ruler.${near.key}` as "ruler.earth") })}` : dist;
+    const l1 = Math.abs(near.z - z) < 0.25 ? `${dist} · ${t("ruler.around", { stop: t(`ruler.${near.key}` as "ruler.earth") })}` : dist;
+    // Işığın yola çıktığı an: 100 milyon ışık yılının ötesinde genişleyen evrendeki yolculuk süresi (ışık sayacıyla aynı)
+    const obs = this.ctx.assets.sky.meta.obs_year_frac;
+    const lb = Dmly > 100 ? Math.min(lightTravelGyr(Dmly), AGE_GYR) * 1e9 : ly;
+    let l2: string;
+    if (lb >= 1 && lb < 10_000) {
+      const ll = lightLeft(lb, obs), ap = ll.approx ? "~" : "";
+      l2 = t("ruler.lightYear", { yıl_de: ap + (ll.bc != null ? `MÖ ${trLocative(ll.bc)}` : trLocative(ll.year)), year: ap + (ll.bc != null ? `${ll.bc} BC` : String(ll.year)) });
+    } else {
+      l2 = t("ruler.lightAgo", { t: fmtLightTime(lb * 365.25 * 86400, lang) });
+    }
+    const ev = eventsFor(lb, obs)[0];
+    return [l1, l2, ev ? `★ ${historyLine(ev, lang)}` : ""].filter(Boolean).join("\n");
   }
 
   private flyTo(tg: Target) {

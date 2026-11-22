@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { placeVars } from "../ui/place";
 import { annotateInto } from "../ui/glossary";
 import type { AppContext, Scene } from "../app/director";
 import type { Action } from "../app/input";
@@ -41,12 +42,12 @@ export class Act3Birth implements Scene {
     this.w.starMat.uniforms.uTwinkle.value = 1;
 
     const b = ctx.shared.birth;
-    const place = sky.meta.location.name;
+    const pv = placeVars(sky.meta);
     let text = "";
     if (b && (b.kind === "match" || b.kind === "nearest")) {
       this.star = b.star;
       const name = sky.starName(b.star) ?? "";
-      text = b.up ? t(b.kind === "match" ? "act3.match" : "act3.nearest", { name, yıl_de: trLocative(b.year), year: b.year, place })
+      text = b.up ? t(b.kind === "match" ? "act3.match" : "act3.nearest", { ...pv, name, yıl_de: trLocative(b.year), year: b.year })
         : t("act3.below", { dir: t(`dir.${dirKey(sky.starAz[b.star])}` as "dir.n") });
     } else if (b && b.kind === "tooYoung") {
       this.star = sky.stars.data.findIndex(r => r[7] === 32349);              // Sirius

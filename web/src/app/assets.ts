@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { RELOC, rotateFloat32 } from "../science/reloc";
 
 export interface View { az_deg: number; horizon_screen_y: number; vfov_landscape_deg: number; vfov_portrait_deg: number }
 export interface VisibilityCfg { sqm_city: number; sqm_dark: number; glow_city_mag: number; glow_dark_mag: number; extinction_k: number }
@@ -9,7 +10,8 @@ export interface Galaxy { key: string; enu_dir: number[]; dist_ly: number; alt: 
 export interface SkyJson {
   version: number;
   meta: {
-    location: { name: string; name_ablative: string; lat: number; lon: number; height_m: number };
+    /** local: cihaz konumu (E1, yalnızca bellekte); name_dative: Türkçe yönelme hâli (yoksa "{name}'ya") */
+    location: { name: string; name_ablative: string; lat: number; lon: number; height_m: number; local?: boolean; name_dative?: string };
     time_utc: string; time_local: string; obs_year_frac: number; tz: string;
     sun: { alt: number; az: number; dist_au: number };
     moon: { alt: number; az: number; illum: number; distance_km: number; light_time_s: number };
@@ -80,6 +82,8 @@ export interface Params {
   goto: string | null;
   /** ?compare=1: doğrudan boyut karşılaştırması */
   compare: boolean;
+  /** E1: girişte konum akışını kendiliğinden başlat (dünyalar kurulduktan sonra yeniden yükleme için) */
+  loc: boolean;
 }
 
 export function readParams(search = location.search): Params {
@@ -96,6 +100,7 @@ export function readParams(search = location.search): Params {
     explore: q.get("explore") === "1",
     goto: q.get("goto"),
     compare: q.get("compare") === "1",
+    loc: q.get("loc") === "1",
   };
 }
 
@@ -158,6 +163,29 @@ export async function loadAssets(renderer: THREE.WebGLRenderer, onProgress: (p: 
   const [sky, milkyWay] = await Promise.all([skyP, mwP, document.fonts.ready]);
   onProgress(1);
   return { sky, milkyWay, variant };
+}
+
+/**
+ * E1 (cihaz konumu): göksel koordinatlardaki yıldız listesi ve Samanyolu dokusu (pipeline: stars_icrs.json, milkyway_icrs_*.webp).
+ * Yalnızca kullanıcı "Konumumu kullan" derse yüklenir.
+ */
+export async function loadRelocationData(variant: "4k" | "2k") {
+  const [icrs, bmp] = await Promise.all([
+    fetch(`${BASE}data/stars_icrs.json`).then(r => { if (!r.ok) throw new Error(`stars_icrs.json: ${r.status}`); return r.json() as Promise<{ data: [number, number][] }>; }),
+    fetch(`${BASE}data/milkyway_icrs_${variant}.webp`).then(r => { if (!r.ok) throw new Error(`milkyway_icrs_${variant}.webp: ${r.status}`); return r.blob(); })
+      .then(b => createImageBitmap(b, { imageOrientation: "flipY" })),
+  ]);
+  const tex = new THREE.Texture(bmp as unknown as HTMLImageElement);
+  tex.flipY = false;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.generateMipmaps = false;                   // RA = 0h dikişinde çizgi olmasın
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.userData.icrs = true;                      // skyDome: göksel örnekleme
+  tex.needsUpdate = true;
+  return { icrs: icrs.data, milkyWay: tex };
 }
 
 const texCache = new Map<string, Promise<THREE.Texture>>();
@@ -228,7 +256,11 @@ export function loadCosmic() {
   cosmicP = Promise.all([
     fetch(`${BASE}data/cosmic.bin`).then(r => { if (!r.ok) throw new Error(`cosmic.bin: ${r.status}`); return r.arrayBuffer(); }),
     fetch(`${BASE}data/cosmic_names.json`).then(r => r.json() as Promise<{ i: number; name: string }[]>),
-  ]).then(([buf, names]) => ({ data: new Float32Array(buf), names: new Map(names.map(x => [x.i, x.name])) }));
+  ]).then(([buf, names]) => {
+    const data = new Float32Array(buf);
+    if (RELOC.R) rotateFloat32(data, 6, data.length / 6, RELOC.R);             // E1: konuma taşı
+    return { data, names: new Map(names.map(x => [x.i, x.name])) };
+  });
   return cosmicP;
 }
 
@@ -236,7 +268,12 @@ let smallP: Promise<ArrayBuffer> | null = null;
 /** Asteroit ve Kuiper kuşağı: smallbodies.bin (Float32 × 3: güneş merkezli ENU [AB]; ardından Uint8 grup) */
 export function loadSmallBodies() {
   if (smallP) return smallP;
-  smallP = fetch(`${BASE}data/smallbodies.bin`).then(r => { if (!r.ok) throw new Error(`smallbodies.bin: ${r.status}`); return r.arrayBuffer(); });
+  smallP = fetch(`${BASE}data/smallbodies.bin`).then(r => { if (!r.ok) throw new Error(`smallbodies.bin: ${r.status}`); return r.arrayBuffer(); })
+    .then(buf => {
+      // E1: güneş merkezli ENU konumları yeni konumun çerçevesine (N × 3 float32, ardından N × uint8 grup → N = bayt / 13)
+      if (RELOC.R) { const n = buf.byteLength / 13; rotateFloat32(new Float32Array(buf, 0, n * 3), 3, n, RELOC.R); }
+      return buf;
+    });
   return smallP;
 }
 

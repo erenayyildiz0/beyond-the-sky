@@ -68,6 +68,12 @@ button { font: inherit; color: inherit; }
 .start-btn:hover { border-color: var(--accent); }
 .intro-row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
 .intro-sound { font-size: var(--size-small); color: var(--muted); }
+/* E1: Konumumu kullan */
+.loc { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; max-width: min(460px, 90vw); text-align: center; }
+.loc-link { background: none; border: 0; color: var(--accent); font: inherit; font-size: var(--size-small); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 4px; padding: 6px; }
+.loc-note { font-size: var(--size-small); color: var(--muted); line-height: 1.4; }
+.loc-choice { border: 1px solid var(--badge-border); background: var(--badge-bg); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
 .lang-switch { position: absolute; bottom: calc(20px + var(--safe-b)); display: flex; gap: 6px; }
 .lang-switch button { background: none; border: 0; color: var(--muted); font-size: var(--size-small); cursor: pointer; padding: 6px 8px; }
 .lang-switch .sel { color: var(--text); text-decoration: underline; text-underline-offset: 4px; }
@@ -155,8 +161,9 @@ button { font: inherit; color: inherit; }
 .ruler-ghost { position: absolute; right: 3px; width: 11px; height: 11px; margin-bottom: -5.5px; border-radius: 50%;
   border: 1.5px solid #FFE7B0; opacity: 0; pointer-events: none; transition: opacity .15s; }
 .ruler-ghost.on { opacity: 1; }
-.ruler-ghost-label { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); white-space: nowrap; font-size: var(--size-small);
-  color: #FFE7B0; background: rgba(2, 4, 10, .85); padding: 4px 8px; border-radius: 8px; }
+.ruler-ghost-label { position: absolute; right: 22px; top: 50%; transform: translateY(-50%); white-space: pre-line; width: max-content;
+  max-width: min(300px, 70vw); font-size: var(--size-small); line-height: 1.4; text-align: right;
+  color: #FFE7B0; background: rgba(2, 4, 10, .88); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255, 231, 176, .25); }
 .fly-controls { position: absolute; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translateX(-50%); display: flex; gap: 14px; }
 .fly-btn { min-width: 96px; height: 64px; border-radius: 32px; border: 1px solid var(--badge-border); background: var(--badge-bg);
   cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; padding: 0 22px; }

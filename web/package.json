@@ -21,6 +21,7 @@
     "vitest": "^5.1.1"
   },
   "dependencies": {
+    "astronomy-engine": "^2.1.19",
     "three": "^0.187.0"
   }
 }
