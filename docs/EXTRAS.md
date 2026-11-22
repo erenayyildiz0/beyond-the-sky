@@ -66,8 +66,10 @@ görünsün; dokununca fotoğraflı bir kutu açılsın.
 - **Yıldız kartında:** "Bu ışık yola çıktığında: …" — yalnızca 300 ışık yılından yakın yıldızlarda (uzaklık belirsizliği küçük).
 - **Kutu:** fotoğraf, tarih, metin, ışığın yola çıkışına göre önce/sonra farkı, emeği geçen ve lisans, kaynak bağlantıları
   (yalnızca çevrimiçiyken).
-- **Olaylar** (web/src/content/history.ts): uzay tarihi (1054 süpernovası → Webb), Dünya tarihi (Göbeklitepe → Cumhuriyet),
-  derin zaman (buzul çağı → Dünya'nın oluşumu). Her olay kaynaklı (NASA, ESA, Britannica, UNESCO, hakemli makaleler; DOI'ler
+- **Olaylar** (web/src/content/history.ts): uzay tarihi (1054 süpernovası, Halley 1066, Tycho 1572, Kepler 1604 → SN 1987A,
+  Shoemaker-Levy 9, Webb), Dünya tarihi (Göbeklitepe → Cumhuriyet), derin zaman (buzul çağı → Dünya'nın ve Ay'ın oluşumu) ve
+  kozmik zaman (Güneş Sistemi'nin doğuşu, Gaia-Enceladus birleşmesi, Samanyolu'nun kalın diski, ilk galaksiler, kozmik mikrodalga
+  arka planı). Sanatçı çizimleri ekranda "temsili" diye etiketli. Her olay kaynaklı (NASA, ESA, Britannica, UNESCO, hakemli makaleler; DOI'ler
   Crossref'te doğrulandı). Kaynağı olmayan olay eklenmez.
 - **Görseller** (pipeline/bts/history.py → web/public/data/history/): yalnızca kamu malı ya da özgür lisanslı (NASA kamu malı;
   Wikimedia Commons'ta lisansı tek tek doğrulananlar: kamu malı, CC0, CC BY-SA 3.0). Belgesel kareleri telif nedeniyle yok.

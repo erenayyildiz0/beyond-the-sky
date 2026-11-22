@@ -64,5 +64,5 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
 - Kara delik görüntüleri: ışık bükülmesi Schwarzschild jeodeziklerinden hesaplanır; disk ve arka plan yıldızları temsilidir.
 - Yıldız yüzeyleri (granülasyon, lekeler, korona, çıkıntılar) temsilidir; korona parlaklık profili Baumbach (1937).
 - Tarih çapaları görselleri: NASA (kamu malı; Apollo 8 ve 11, STS-31, Voyager, Webb fırlatışı, Soluk Mavi Nokta, Plüton, Uranüs,
-  Neptün, Chicxulub), Wikimedia Commons (kamu malı: Zonaro, Rohan Ustası, Kopernik 1543, Galileo 1610, Newton 1687; CC0: The
+  Neptün, Chicxulub, Shoemaker-Levy 9, SN 1987A, Kepler süpernova kalıntısı, Hubble XDF; sanatçı çizimleri: gezegen oluşturan disk, Samanyolu), ESA ve Planck (CMB, CC BY-SA 3.0 IGO), Wikimedia Commons (kamu malı: Bayeux duvar halısı, Zonaro, Rohan Ustası, Kopernik 1543, Galileo 1610, Newton 1687; CC0: The
   Metropolitan Museum of Art; CC BY-SA 3.0: Teomancimit, Göbeklitepe). Olay kaynakları web/src/content/history.ts içinde.

@@ -28,6 +28,13 @@ describe("tarih çapaları (EXTRAS T1)", () => {
     expect(ids(2.5e6)).toContain("homo");
     expect(ids(66e6)[0]).toBe("dinos");
   });
+  it("uzay olayları: Güneş Sistemi'nin doğuşu, Gaia-Enceladus, kozmik mikrodalga arka planı, SN 1987A, Kepler 1604", () => {
+    expect(ids(4.567e9)).toContain("solarSystem");
+    expect(ids(1e10)[0]).toBe("enceladus");
+    expect(ids(13.79e9)[0]).toBe("cmb");
+    expect(ids(39.9)[0]).toBe("sn1987a");
+    expect(ids(422.9)[0]).toBe("keplerSn");
+  });
   it("Ay'ın uzaklığında (1,3 sn) ve boşluklarda olay yok", () => {
     expect(ids(4e-8)).toEqual([]);
     expect(ids(150)).toEqual([]);
