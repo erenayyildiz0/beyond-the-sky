@@ -56,6 +56,23 @@ SPEC §2.3 ve §6.5'teki "ray" (Ankara → Andromeda tek çizgi, yalnızca ileri
 - **Mesafe:** ışık süresinin altında km ("372.193 km", "20,8 kentilyon km") ve uzakta ışık yılı.
 - Katmanlı çizim (§6.5.1) aynen; kamera konumu raydan değil serbest konumdan gelir.
 
+## T1 — Tarih çapaları (karar: 22.11.2026; SPEC §16'dan öne alındı)
+
+Kullanıcı isteği: uzaklaştıkça, o uzaklıktan gelen ışık yola çıktığında Dünya tarihinde ve uzay tarihinde ne olduğu
+görünsün; dokununca fotoğraflı bir kutu açılsın.
+- **Uçuşta:** ışık sayacının altında "O sıralarda: Apollo 11 Ay'a indi (1969) ›". Işığın yola çıktığı an = evden uzaklık
+  (100 milyon ışık yılının ötesinde Planck 2018 ile ışık yolculuğu süresi). Pencere: tarihsel ölçekte ±max(3 yıl, %6),
+  derin zamanda ±%15; pencerede olay yoksa satır gizli. Kamera konumu kesin olduğundan belirsizlik yok.
+- **Yıldız kartında:** "Bu ışık yola çıktığında: …" — yalnızca 300 ışık yılından yakın yıldızlarda (uzaklık belirsizliği küçük).
+- **Kutu:** fotoğraf, tarih, metin, ışığın yola çıkışına göre önce/sonra farkı, emeği geçen ve lisans, kaynak bağlantıları
+  (yalnızca çevrimiçiyken).
+- **Olaylar** (web/src/content/history.ts): uzay tarihi (1054 süpernovası → Webb), Dünya tarihi (Göbeklitepe → Cumhuriyet),
+  derin zaman (buzul çağı → Dünya'nın oluşumu). Her olay kaynaklı (NASA, ESA, Britannica, UNESCO, hakemli makaleler; DOI'ler
+  Crossref'te doğrulandı). Kaynağı olmayan olay eklenmez.
+- **Görseller** (pipeline/bts/history.py → web/public/data/history/): yalnızca kamu malı ya da özgür lisanslı (NASA kamu malı;
+  Wikimedia Commons'ta lisansı tek tek doğrulananlar: kamu malı, CC0, CC BY-SA 3.0). Belgesel kareleri telif nedeniyle yok.
+  Çalışma anında ağ isteği yok.
+
 Sıra: Faz 1 (M3–M6) bittikten sonra **E1 → E2**. Her ikisi de M2'nin gökyüzü çekirdeğini yeniden kullanır.
 
 ---

@@ -50,6 +50,8 @@ import { createLightRay } from "../render/lightRay";
 import { conName, parseSpect, relLum, sunMagFrom, sunState, tonight, voyagerYears } from "../science/facts";
 import { bvToKelvin } from "../science/stars";
 import { noteFor } from "../content/cards";
+import { eventsFor, type HistoryEvent } from "../content/history";
+import { HistoryBox, historyLine } from "../ui/historyBox";
 import { JumpMenu, type JumpItem } from "../ui/jumpMenu";
 
 /** Yerden uzaya geçiş yüksekliği (km): altında Perde 1 gökyüzü, üstünde katmanlı görüntü. */
@@ -390,6 +392,11 @@ export class Act2Flight implements Scene {
   private search: SearchPanel | null = null;
   private linesOn = false;
   private rayLabel!: HTMLElement;
+  private histLine!: HTMLButtonElement;
+  private histBox!: HistoryBox;
+  private histEvents: HistoryEvent[] = [];
+  private histLookback = 0;
+  private histS = 1;
   private ui!: {
     stopCard: StopCard; starLabels: { i: number; e: HTMLElement; text: string }[];
     toBirth: HTMLElement; birth: HTMLElement; yourStar: HTMLElement; ring: HTMLElement; cosmoNote: HTMLElement;
@@ -463,6 +470,9 @@ export class Act2Flight implements Scene {
     const lightVal = el("div", "light-value", "", light);
     const dist = el("div", "light-dist", "", light);
     const cosmoNote = el("div", "light-dist cosmo-note", t("act2.cosmoNote"), light);
+    // Tarih çapası (EXTRAS T1): bu uzaklıktan gelen ışık yola çıktığında Dünya'da ve uzayda ne oluyordu
+    this.histLine = el("button", "history-line", "", light);
+    this.histLine.addEventListener("click", () => this.openHistory(this.histEvents, this.histLookback));
     const ruler = new Ruler(root, this.w.stops.map(s => ({ key: s.key, z: s.z })), s => this.goStop(this.w.stops.findIndex(x => x.key === s.key)));
     show(ruler.root);
     const hint = el("div", "fly-hint", t("act2.ascend"), root);
@@ -537,6 +547,7 @@ export class Act2Flight implements Scene {
     card.onFly = () => { if (this.selected) this.flyTo(this.selected); };
     card.onTrace = () => { if (this.selected) this.traceLight(this.selected); };
     this.rayLabel = el("div", "ray-label", undefined, root);
+    this.histBox = new HistoryBox(root, import.meta.env.BASE_URL);
     if (this.explore) {
       let seen = false;
       try { seen = localStorage.getItem("bts.tipsSeen") === "1"; } catch { /* özel mod */ }
@@ -821,11 +832,19 @@ export class Act2Flight implements Scene {
     if (tg.note) lines.push(tg.note);
     if (dly != null) lines.push(t("card.repGlow"));                         // yakından görünüm temsili (§6.11)
     const note = hip ? noteFor(hip) : null;
+    const hist = dly != null && dly < 300 ? eventsFor(dly, sky.meta.obs_year_frac) : [];
     return {
+      links: hist.length ? [{ text: `${t("history.kicker")}: ${historyLine(hist[0], lang)}`, onClick: () => this.openHistory(hist, dly!) }] : undefined,
       title: tg.name, subtitle: det ? conName(det.con[i], lang) : undefined, lines, fly: dly != null ? "here" : null,
       note: note ? { text: lang === "tr" ? note.tr : note.en, sources: note.sources } : undefined,
       footer: t("card.footer"), trace: dly != null,
     };
+  }
+
+  private openHistory(events: HistoryEvent[], lookback: number) {
+    if (!events.length) return;
+    this.ui.card.hide();
+    this.histBox.open(events, lookback, this.ctx.assets.sky.meta.obs_year_frac, getLang());
   }
 
   private tipDone(kind: "look" | "fly" | "tap") {
@@ -1135,6 +1154,17 @@ export class Act2Flight implements Scene {
       ? fmtLightTime(Math.min(lightTravelGyr(Dmly), AGE_GYR) * 1e9 * 365.25 * 86400, lang)
       : fmtLightTime(D / C_KM_S, lang);
     show(this.ui.cosmoNote, Dmly > 100);
+    // Işığın yola çıktığı an (yıl önce): 100 milyon ışık yılının ötesinde genişleyen evrendeki yolculuk süresi
+    this.histS += this.dtLast;
+    if (this.histS > 0.25) {
+      this.histS = 0;
+      const lb = Dmly > 100 ? Math.min(lightTravelGyr(Dmly), AGE_GYR) * 1e9 : D / LY_KM;
+      this.histLookback = lb;
+      this.histEvents = this.phase === "return" ? [] : eventsFor(lb, this.ctx.assets.sky.meta.obs_year_frac);
+      const e = this.histEvents[0];
+      if (e) this.histLine.textContent = `${t("history.now")}: ${historyLine(e, lang)} ›`;
+      this.histLine.classList.toggle("on", !!e);
+    }
     const ly = D / LY_KM;
     this.ui.dist.textContent = `${t("act2.home")}: ${fmtKm(D, lang)}${ly >= 0.01 ? ` · ${fmtLy(ly, lang)} ${t("act2.ly")}` : ""}`;
     this.ui.ruler.update(z);

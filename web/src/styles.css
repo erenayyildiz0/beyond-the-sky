@@ -290,3 +290,27 @@ button { font: inherit; color: inherit; }
 .ray-label { position: absolute; left: 0; top: 0; pointer-events: none; color: #FFE7B0; text-shadow: 0 0 8px #000; }
 .ray-year { font-size: calc(var(--size-body) * 1.2); font-variant-numeric: tabular-nums; }
 .ray-note { font-size: 11px; color: var(--muted); }
+
+/* Tarih çapaları (EXTRAS T1) */
+.history-line { display: block; max-width: min(460px, 56vw); margin-top: 6px; padding: 4px 0; text-align: left; border: 0; background: none;
+  color: #FFE7B0; font: inherit; font-size: var(--size-small); line-height: 1.35; cursor: pointer; opacity: 0; transition: opacity var(--fade) var(--ease); }
+#hud .history-line:not(.on) { pointer-events: none; }
+.history-line.on { opacity: 1; }
+.history-line:hover { text-decoration: underline; }
+.history-box { position: absolute; right: 16px; top: calc(70px + var(--safe-t)); bottom: calc(110px + var(--safe-b)); width: min(360px, 92vw);
+  display: flex; flex-direction: column; background: rgba(2, 4, 10, .88); border: 1px solid var(--badge-border); border-radius: 14px;
+  backdrop-filter: blur(8px); z-index: 4; overflow: hidden; }
+.act2 > .history-box.on, .act2 > .history-box.on * { pointer-events: auto; }
+.history-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 8px; }
+.history-kicker { font-size: var(--size-small); color: var(--accent); letter-spacing: .06em; text-transform: uppercase; }
+.history-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 14px 14px; }
+.history-item + .history-item { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--badge-border); }
+.history-img { width: 100%; max-height: 46vh; object-fit: contain; border-radius: 8px; background: #000; display: block; }
+.history-credit { font-size: 10px; color: var(--muted); margin-top: 3px; }
+.history-date { margin-top: 10px; font-size: var(--size-small); color: #FFE7B0; font-variant-numeric: tabular-nums; }
+.history-text { margin-top: 4px; font-size: calc(var(--size-body) * 1.05); line-height: 1.4; }
+.history-gap { margin-top: 4px; font-size: 11px; color: var(--muted); }
+.pick-links { margin-top: 8px; }
+.pick-link { display: block; width: 100%; text-align: left; border: 0 !important; background: none !important; padding: 4px 0 !important;
+  color: #FFE7B0; font: inherit; font-size: var(--size-small); cursor: pointer; }
+@media (max-aspect-ratio: 1/1) { .history-box { top: auto; left: 16px; right: 16px; width: auto; height: 58vh; } }

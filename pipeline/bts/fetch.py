@@ -54,7 +54,8 @@ def download(url: str, dest: Path, timeout: float = 60) -> Path:
     tmp = dest.with_suffix(dest.suffix + ".part")
     print(f"İndiriliyor: {url}")
     try:
-        with requests.get(url, stream=True, timeout=timeout) as r:
+        # Wikimedia gibi sunucular tanımlayıcı bir User-Agent ister
+        with requests.get(url, stream=True, timeout=timeout, headers={"User-Agent": "BeyondTheSky/1.0 (educational project)"}) as r:
             r.raise_for_status()
             with open(tmp, "wb") as f:
                 for chunk in r.iter_content(chunk_size=1 << 20):

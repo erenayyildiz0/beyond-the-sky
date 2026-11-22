@@ -8,6 +8,8 @@ export interface PickInfo {
   footer?: string;
   /** "Işığını izle" düğmesi (uzaklığı bilinen yıldızlar) */
   trace?: boolean;
+  /** Dokunulabilir satırlar (ör. tarih çapası: "Işığı yola çıktığında: …") */
+  links?: { text: string; onClick: () => void }[];
 }
 
 /** Dokunulan cismin kartı (SPEC §6.12): başlık, §3.16 satırları, merak notu; Buraya uç · Işığını izle · Kapat. */
@@ -17,6 +19,7 @@ export class PickCard {
   private sub: HTMLElement;
   private body: HTMLElement;
   private note: HTMLElement;
+  private links: HTMLElement;
   private foot: HTMLElement;
   private fly: HTMLButtonElement;
   private trace: HTMLButtonElement;
@@ -29,6 +32,7 @@ export class PickCard {
     this.title = el("div", "pick-title", "", this.root);
     this.sub = el("div", "pick-sub", "", this.root);
     this.body = el("div", "pick-body", "", this.root);
+    this.links = el("div", "pick-links", "", this.root);
     this.note = el("div", "pick-note", "", this.root);
     this.foot = el("div", "pick-foot", "", this.root);
     const row = el("div", "pick-actions", undefined, this.root);
@@ -46,6 +50,12 @@ export class PickCard {
     this.sub.textContent = info.subtitle ?? "";
     this.sub.style.display = info.subtitle ? "" : "none";
     this.body.replaceChildren(...info.lines.map(l => el("div", "", l)));
+    this.links.replaceChildren(...(info.links ?? []).map(l => {
+      const b = el("button", "pick-link", `${l.text} ›`);
+      b.addEventListener("click", l.onClick);
+      return b;
+    }));
+    this.links.style.display = info.links?.length ? "" : "none";
     this.note.replaceChildren();
     if (info.note) {
       el("div", "", info.note.text, this.note);

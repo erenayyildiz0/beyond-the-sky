@@ -238,6 +238,8 @@ def main() -> None:
         written += build_galaxy_maps(out)
         from bts.cmb import build_cmb
         written += build_cmb(cfg, out)
+        from bts.history import write_history_images
+        written += write_history_images(raw, out / "history")          # T1: tarih çapaları görselleri
         sizes.update({p.name: p.stat().st_size for p in written})
     from bts.preview import build_previews
     build_previews(m, cfg.path(cfg.preview_dir), altaz8)

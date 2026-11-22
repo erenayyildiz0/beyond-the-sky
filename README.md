@@ -63,3 +63,6 @@ _(Tam liste M8'de SPEC §15'e göre tamamlanacak.)_
   (Kervella ve ark. 2017), Deneb (Schiller & Przybilla 2008), Antares (Ohnaka ve ark. 2013 + van Leeuwen 2007).
 - Kara delik görüntüleri: ışık bükülmesi Schwarzschild jeodeziklerinden hesaplanır; disk ve arka plan yıldızları temsilidir.
 - Yıldız yüzeyleri (granülasyon, lekeler, korona, çıkıntılar) temsilidir; korona parlaklık profili Baumbach (1937).
+- Tarih çapaları görselleri: NASA (kamu malı; Apollo 8 ve 11, STS-31, Voyager, Webb fırlatışı, Soluk Mavi Nokta, Plüton, Uranüs,
+  Neptün, Chicxulub), Wikimedia Commons (kamu malı: Zonaro, Rohan Ustası, Kopernik 1543, Galileo 1610, Newton 1687; CC0: The
+  Metropolitan Museum of Art; CC BY-SA 3.0: Teomancimit, Göbeklitepe). Olay kaynakları web/src/content/history.ts içinde.
