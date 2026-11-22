@@ -75,6 +75,11 @@ export class Intro implements Scene {
       if (this.nautical) el("div", "loc-note", t("loc.nautical"), box);
       return;
     }
+    const own = el("button", "loc-link", `📷 ${t("own.open")}`, box);     // E2: kendi fotoğrafın
+    own.addEventListener("click", () => {
+      this.ctx.gyro.enable().catch(() => {});                        // iOS: izin aynı dokunuşta
+      this.ctx.director.go("ownsky");
+    });
     const btn = el("button", "loc-link", `📍 ${t("loc.use")}`, box);
     const msg = el("div", "loc-note", "", box);
     this.locMsg = (text: string) => { msg.textContent = text; };

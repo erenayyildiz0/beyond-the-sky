@@ -13,6 +13,7 @@ import { Act2Flight } from "./scenes/act2Flight";
 import { Intro } from "./scenes/intro";
 import { Compare } from "./scenes/compare";
 import { Act3Birth } from "./scenes/act3Birth";
+import { OwnSky } from "./scenes/ownSky";
 import { T } from "./app/timeline";
 import { el } from "./ui/hud";
 import { setLang, t } from "./ui/i18n";
@@ -58,7 +59,7 @@ async function main() {
     extinctionK: assets.sky.meta.visibility.extinction_k, vMax: T.act2.vMax, galaxySize: 1, showNames: false,
   };
   const input = new Input(canvas);
-  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare(), act3: () => new Act3Birth() });
+  const director = new Director(fade, { intro: () => new Intro(), act1: () => new Act1Lights(), act2: () => new Act2Flight(), compare: () => new Compare(), act3: () => new Act3Birth(), ownsky: () => new OwnSky() });
   const ctx: AppContext = { renderer, assets, params, input, hud, tune, director, debug: {}, shared: {}, gyro: new Gyro(), audio: null };
   director.ctx = ctx;
   if (params.debug) (window as unknown as { __bts: AppContext }).__bts = ctx;   // yalnızca ?debug=1: ölçüm/teşhis

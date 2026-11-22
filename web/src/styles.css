@@ -378,3 +378,23 @@ button { font: inherit; color: inherit; }
   border: 2px solid #FFE7B0; pointer-events: none; }
 .body-label.here.flash { color: #FFE7B0; text-shadow: 0 0 12px #FFE7B0; animation: here-flash 0.8s ease-in-out 4; }
 @keyframes here-flash { 50% { opacity: .35; } }
+
+/* E2: Kendi gökyüzün */
+.own { position: absolute; inset: 0; }
+.own > * { opacity: 0; transition: opacity var(--fade) var(--ease); }
+.own > .on, .own > .own-back, .own > .own-msg { opacity: 1; }
+.own > :not(.on):not(.own-back) * { pointer-events: none !important; }
+.own-shoot { position: absolute; inset: 0; background: #000; }
+.own-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.own-tip { position: absolute; left: 50%; top: calc(18px + var(--safe-t)); transform: translateX(-50%); font-size: var(--size-small);
+  color: var(--text); background: rgba(2, 4, 10, .6); padding: 6px 12px; border-radius: 999px; white-space: nowrap; }
+.own-align { top: auto; bottom: calc(190px + var(--safe-b)); }
+.own-capture { position: absolute; left: 50%; bottom: calc(36px + var(--safe-b)); transform: translateX(-50%); width: 76px; height: 76px;
+  border-radius: 50%; border: 3px solid #fff; background: rgba(255, 255, 255, .15); color: var(--text); cursor: pointer; }
+.own-back { position: absolute; left: 16px; top: calc(14px + var(--safe-t)); z-index: 3; }
+.own-msg { position: absolute; left: 50%; top: 45%; transform: translateX(-50%); width: min(420px, 88vw); text-align: center; color: var(--muted); }
+.own-edit { position: absolute; inset: 0; }
+.own-edit .badge { top: calc(14px + var(--safe-t)); }
+.own-tools { position: absolute; right: 16px; bottom: calc(36px + var(--safe-b)); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.own-shift { display: flex; flex-direction: column; gap: 4px; font-size: var(--size-small); color: var(--muted); }
+.own-shift input { pointer-events: auto; width: 140px; }

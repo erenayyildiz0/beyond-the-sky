@@ -137,3 +137,12 @@ ağ kapalıyken çalışır.
 
 **Ara adım (ucuz):** Fotoğraf yalnızca arka plan olarak siluetin yerine konur (maske = ufuk çizgisinin altı), ışıklar
 parlaklık eşiğiyle söner. Tam hizalama ve bölütleme sonra.
+
+**Uygulama (22.11.2026, ara adım + yönelim):** web/src/scenes/ownSky.ts, web/src/science/photoMask.ts. Girişte "Kendi gökyüzün".
+Çekim anındaki jiroskop yönelimi (yoksa bu gecenin başlangıç yönü) ve görüş açısı (tarayıcı vermediği için 26 mm eşdeğeri ana
+kamera: uzun kenar 69,4°; iki parmakla ayarlanır). Gökyüzü maskesi sütun sütun pürüzsüzlükten ufuk çizgisi + ortanca süzgeç
+(elle kaydırılır); ışıklar ufkun altında çevresinden belirgin parlak pikseller. Basılı tutunca pencere grupları rastgele
+eşiklerle söner, gökyüzündeki şehir parlaması q ile saydamlaşır ve altından Perde 1'in gökyüzü (kubbe + yıldızlar, aynı
+görünürlük modeli) görünür. Fotoğraf yalnızca bellekte; kamera çekimden hemen sonra kapanır; paylaşım yalnızca kullanıcı isterse.
+Doğrulama: yapay gece karesiyle (Chrome sahte kamera) uçtan uca; maske testleri (sütunların %90'ında ±4 px). Bölütleme modeli
+ve gökyüzünde görünen Ay/parlak yıldıza oturtma henüz yok; gerçek telefonda pusula sapması elle hizalamayla düzeltilir.

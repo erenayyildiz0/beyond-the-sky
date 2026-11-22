@@ -45,7 +45,7 @@ export interface AppContext {
     explore?: boolean };
 }
 
-export type SceneId = "intro" | "act1" | "act2" | "compare" | "act3";
+export type SceneId = "intro" | "act1" | "act2" | "compare" | "act3" | "ownsky";
 
 export class Director {
   state: State = "LOADING";
